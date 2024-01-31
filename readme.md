@@ -20,17 +20,17 @@ you can use python of your system, then you have to install
 pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
 
 you can also open the terminal in the folder of scvoice and try to install a local python envirement for SCvoice only, to avoid dependency conflicts
-make the local python envirement in folder venv:
 
+make the local python envirement in folder venv:
 python3 -m venv venv
 
 install the needed liberies to the local python envirement
 venv/bin/pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
 
 useage:
-python3 stringinterpreter.py 
+python3 scvoice.py 
 or with local SCvoice only envirement
-vanv/bin/python3 -m venv p
+venv/bin/python3 scvoice.py 
 
 
 speech recognition uses a german vosk model at the moment, wich is in /model/ folder.
