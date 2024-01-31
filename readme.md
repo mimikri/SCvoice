@@ -1,3 +1,5 @@
+# SCvoice
+
 this is a proof of concept. may it will grow in time depening on the interesst.
 
 what it does.
@@ -13,25 +15,30 @@ if there is a match, a key is pressed or a key combination, and a successmessage
 
 so the user can tell an order, and the system does it an tells that it did do the order.
 
-installation 
+# installation:  
 download the repo and unzip it to a folder, or use git for it
-you can use python of your system, then you have to install 
-
+you can use python of your system, then you have to install: 
+```
 pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
-
+```
 you can also open the terminal in the folder of scvoice and try to install a local python envirement for SCvoice only, to avoid dependency conflicts
 
-make the local python envirement in folder venv:
+make the local python envirement(execute in scvoice folder): 
+```
 python3 -m venv venv
-
-install the needed liberies to the local python envirement
+```
+install the needed liberies to the local python envirement: 
+```
 venv/bin/pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
-
-useage:
+```
+# useage:
+```
 python3 scvoice.py 
+```
 or with local SCvoice only envirement
+```
 venv/bin/python3 scvoice.py 
-
+```
 
 speech recognition uses a german vosk model at the moment, wich is in /model/ folder.
 the model can be switched to an english one, and the scconfig.py file then has to be changed, to english keywords. 
