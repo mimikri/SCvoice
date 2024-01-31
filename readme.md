@@ -7,7 +7,7 @@ what it does.
 speech_recognition(mic) -> stt(vosk) -> press keys on keyboard -> tts(pyttsx4 with espeak)
 
 it is a tiny py script wich, listens to the microphone.
-if the user tells it an order, it uses vosk to turn the audio into text.
+if the user tells it an order, it uses vosk to turn the audio into text, fullfill it and tell the use that it has done it.
 
 there is a scconfig.py file, wich contains all the possible orders.
 the string resulting from the spoken order is compared with the keywords of the orders.
