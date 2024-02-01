@@ -61,13 +61,13 @@ def refresh_display():
                 entry = ttk.Entry(frame, width=widths[j], style='Custom.TEntry')
                 entry.grid(row=i+1, column=j+1)
                 entry.insert(0, value)
-                entry.bind('<KeyRelease>', lambda event, i=i, j=key: update_data(event, i, key))
+                entry.bind('<KeyRelease>', lambda event, i=i, j=key: update_data(event, i, j))
             else:
                 # Action Type dropdown
                 action_type_var = ['normal', 'special']
                 action_type_combobox = ttk.Combobox(frame, values=action_type_var,width=10, style='Custom.TCombobox')
                 action_type_combobox.set(value)
-                action_type_combobox.bind("<<ComboboxSelected>>", lambda event, i=i, j=key: update_data(event, i, key))
+                action_type_combobox.bind("<<ComboboxSelected>>", lambda event, i=i, j=key: update_data(event, i, j))
                 action_type_combobox.grid(row=i+1, column=j+1)
 
 
@@ -101,6 +101,8 @@ def update_micset(event, key):
     data['micsettings'][key] = event.widget.get()
     save_config()
 def update_data(event, i, key):
+    print(i,key)
+    print(data['micsettings'])
     data['commands'][i][key] = event.widget.get()
     save_config()
 
@@ -110,7 +112,7 @@ def change_language(event):
 
 def save_config():
     with open('scconfig.py', 'w') as file:
-        file.write(f"LNG = \"{data['LNG']}\"\nmicsettings = {data['micsettings']}\ncommands = {data['commands']}")
+        file.write(f"LNG = \"{data['LNG']}\"\ncommands = {data['commands']}\nmicsettings = {data['micsettings']}\n")
 
 
 

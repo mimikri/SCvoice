@@ -13,30 +13,64 @@ from pynput.keyboard import Key, Controller
 import json
 keyboard = Controller()
 import multiprocessing
+import os
+from vosk import Model, KaldiRecognizer
+
+
+
 audiocount = 0
 audioall = 0
-# Define the array of dictionaries
+# get settings from settingsfile
 import scconfig
 commands = scconfig.commands
-r = sr.Recognizer()
-r.energy_threshold = 1500  # minimum audio energy to consider for recording
-r.dynamic_energy_threshold = True
-r.dynamic_energy_adjustment_damping = 0.15
-r.dynamic_energy_ratio = 1.5
-r.pause_threshold = 0.05  # seconds of non-speaking audio before a phrase is considered complete
-r.operation_timeout = None  # seconds after an internal operation (e.g., an API request) starts before it times out, or ``None`` for no timeout
-r.phrase_threshold = 0.05  # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
-r.non_speaking_duration = 0.05  # seconds of non-speaking audio to keep on both sides of the recording
+micsettings = scconfig.micsettings
+LNG = scconfig.LNG
+LNGshort = "de" if LNG == "German" else "en"
 
+
+
+
+
+
+
+r = sr.Recognizer()
+# Assuming `r` is the speech recognition object
+
+r.energy_threshold = float(micsettings['energy_threshold'])  # minimum audio energy to consider for recording
+r.dynamic_energy_threshold = bool(micsettings['dynamic_energy_threshold'])
+r.dynamic_energy_adjustment_damping = float(micsettings['dynamic_energy_adjustment_damping'])
+r.dynamic_energy_ratio = float(micsettings['dynamic_energy_ratio'])
+r.pause_threshold = float(micsettings['pause_threshold'] ) # seconds of non-speaking audio before a phrase is considered complete
+r.operation_timeout = None  # seconds after an internal operation (e.g., an API request) starts before it times out, or ``None`` for no timeout
+r.phrase_threshold = float(micsettings['phrase_threshold'] ) # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
+r.non_speaking_duration = float(micsettings['non_speaking_duration'] ) # seconds of non-speaking audio to keep on both sides of the recording
+
+#____regognizer vosk_______________________________________________________________________________________________________
+#this is a dump workaround since speech recognitions vosk loader has a hardcoded path to the model, sry, for updateabilite i didn't wanted to change it
+#injecting a changed function, i tryed but didn't work. had problems to access class items from function, so this is ugly but seems to be the cleanest solution so far
+#when stying with vosk only KaldiRecognizer is an option
+def set_tts_model_path(LNG):
+    if os.path.exists('Englishmodel') and os.path.exists('model'):
+        os.rename('model', 'Germanmodel')
+    elif os.path.exists('model') and os.path.exists('Germanmodel'):
+        os.rename('model', 'Englishmodel')
+    if LNG == "English":
+        os.rename('Englishmodel', 'model')
+    elif LNG == "German":
+        os.rename('Germanmodel', 'model')
+set_tts_model_path(LNG)
 #___tts successmessage process_____________________________________________________________________________________________
 
 def sound_process(sound_queue):
         # Initialize the speech engine
     engine = pyttsx4.init('espeak')
-    engine.setProperty('voice', 'german')  # Use the appropriate voice for German language
+    engine.setProperty('voice', LNG.lower())  # Use the appropriate voice for German language
     engine.setProperty('rate', 150)
     engine.setProperty('pitch', 0.5)
-    engine.say("aktiviere sprachassistenten")
+    if LNG == "German":
+        engine.say("aktiviere sprachassistenten")
+    else:
+        engine.say("activating speech assistant")
     engine.runAndWait()
     while True:
         sound_path = sound_queue.get()  # Wait for a sound path to play
@@ -45,7 +79,6 @@ def sound_process(sound_queue):
             engine.runAndWait()          
 
 # Start the sound process
-recognition_sound_path = 'gotit.wav'
 sound_queue = multiprocessing.Queue()
 sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,))
 sound_process.start()
@@ -123,11 +156,13 @@ microphone_process.start()
 #____main loop____________________________________________________________________________________________
 
 # Inside the processing logic
+
 while True:
     # Check if there's a recognized voice string in the queue
     if not audio_queue.empty():
         audio = audio_queue.get()
         # Process the recognized voice string
+        
         recognized_text = json.loads(r.recognize_vosk(audio, language="de"))["text"].strip()
         audioall = audioall +1
         if recognized_text != "":
