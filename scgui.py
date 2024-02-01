@@ -1,6 +1,33 @@
 import tkinter as tk
 from tkinter import ttk
 import sys
+import multiprocessing
+import os
+
+process = 0
+def start_process():
+    global process
+    queue = multiprocessing.Queue()  # Create a queue for communication
+    process = multiprocessing.Process(target=run_python_file)
+    process.start()
+
+def stop_process():
+    global process
+    if process.is_alive():
+        process.terminate()  # Terminate the child process
+        process.join()  # Wait for the child process to terminate
+
+def run_python_file():
+    import scvoice.py  
+def update_status():
+    global process
+    try:
+        if process.is_alive():
+            status_text.insert(tk.END, 'Process up' + "\n")
+        else:
+            status_text.insert(tk.END, 'Process down' + "\n")
+    except:
+        status_text.insert(tk.END, 'Process down no process' + "\n")
 
 def close_window():
     root.destroy()
@@ -31,7 +58,14 @@ data = {
     'LNG': scconfig.LNG,
     'micsettings': scconfig.micsettings
 }
+start_button = tk.Button(tab3, text="Start Process", command=start_process)
+start_button.grid(row=0, column=0)
 
+stop_button = tk.Button(tab3, text="Stop Process", command=stop_process)
+stop_button.grid(row=1, column=0)
+
+status_text = tk.Text(tab3, height=10, width=50)
+status_text.grid(row=2, column=0)
 def delete_row(index):
     del data['commands'][index]
     refresh_display()
@@ -147,5 +181,5 @@ style.configure("TNotebook.Tab", background='#111', foreground='#fff',lightcolor
 style.map("TNotebook.Tab", background=[("selected", "#222")])
 refresh_display()
 # Set dark theme colors
-
+root.after(100, update_status) 
 root.mainloop()

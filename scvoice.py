@@ -17,7 +17,7 @@ import os
 from vosk import Model, KaldiRecognizer
 
 
-
+loopdelay = 0.05
 audiocount = 0
 audioall = 0
 # get settings from settingsfile
@@ -61,7 +61,7 @@ def set_tts_model_path(LNG):
 set_tts_model_path(LNG)
 #___tts successmessage process_____________________________________________________________________________________________
 
-def sound_process(sound_queue):
+def sound_process(sound_queue,parent_pid):
         # Initialize the speech engine
     engine = pyttsx4.init('espeak')
     engine.setProperty('voice', LNG.lower())  # Use the appropriate voice for German language
@@ -72,7 +72,16 @@ def sound_process(sound_queue):
     else:
         engine.say("activating speech assistant")
     engine.runAndWait()
+    
+    
+    countloops = 0
     while True:
+        time.sleep(loopdelay)
+        countloops += 1
+        if countloops > 10000:
+            countloops = 0
+            if os.getppid() != parent_pid:
+                break
         sound_path = sound_queue.get()  # Wait for a sound path to play
         if sound_path:
             engine.say(sound_path)
@@ -80,7 +89,7 @@ def sound_process(sound_queue):
 
 # Start the sound process
 sound_queue = multiprocessing.Queue()
-sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,))
+sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,os.getppid()))
 sound_process.start()
 
 
@@ -89,9 +98,15 @@ sound_process.start()
 # Start the command execution process
 commands_queue = multiprocessing.Queue()
 
-def command_execution_process(sound_queue, commands_queue):
-
+def command_execution_process(sound_queue, commands_queue,parent_pid):
+    countloops = 0
     while True:
+        time.sleep(loopdelay)
+        countloops += 1
+        if countloops > 10000:
+            countloops = 0
+            if os.getppid() != parent_pid:
+                break
         voicestring = commands_queue.get()  # Wait for a recognized voice command
         for command in commands:
             if command["order_string"] in voicestring.lower():
@@ -115,7 +130,7 @@ def command_execution_process(sound_queue, commands_queue):
                 except Exception as e:
                     print(e)
 # Start the command execution process
-command_execution_process = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue))
+command_execution_process = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue,os.getppid()))
 command_execution_process.start()
 
 
@@ -142,14 +157,19 @@ def click_both_buttons(duration):
 audio_queue = multiprocessing.Queue()
 
 # Function to handle microphone input and recognition
-def microphone_recognition_process(audio_queue,r):
+def microphone_recognition_process(audio_queue,r,parent_pid):
     with sr.Microphone(chunk_size=1024) as source:
+        countloops = 0
         while True:
-            
+            countloops += 1
+            if countloops > 10000:
+                countloops = 0
+                if os.getppid() != parent_pid:
+                    break
             audio_queue.put(r.listen(source))
 
 # Start the microphone recognition process
-microphone_process = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r))
+microphone_process = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r,os.getppid()))
 microphone_process.start()
 
 
@@ -158,6 +178,7 @@ microphone_process.start()
 # Inside the processing logic
 
 while True:
+    time.sleep(loopdelay)
     # Check if there's a recognized voice string in the queue
     if not audio_queue.empty():
         audio = audio_queue.get()
