@@ -17,27 +17,28 @@ loopdelay = 0.05
 
 # get settings from settingsfile
 def getconfig():
-    import scconfig
-    global commands
-    global micsettings
+    global settings
     global LNG
     global LNGshort
-    commands = scconfig.commands
-    micsettings = scconfig.micsettings
-    LNG = scconfig.LNG
+    global commands
+    import scconfig
+    settings = scconfig.settings
+    LNG = settings['LNG']
     LNGshort = "de" if LNG == "German" else "en"
+    commands = settings[LNGshort +'commands']
+
 getconfig()
 r = sr.Recognizer()
 # Assuming `r` is the speech recognition object
 
-r.energy_threshold = float(micsettings['energy_threshold'])  # minimum audio energy to consider for recording
-r.dynamic_energy_threshold = bool(micsettings['dynamic_energy_threshold'])
-r.dynamic_energy_adjustment_damping = float(micsettings['dynamic_energy_adjustment_damping'])
-r.dynamic_energy_ratio = float(micsettings['dynamic_energy_ratio'])
-r.pause_threshold = float(micsettings['pause_threshold'] ) # seconds of non-speaking audio before a phrase is considered complete
+r.energy_threshold = float(settings['micsettings']['energy_threshold'])  # minimum audio energy to consider for recording
+r.dynamic_energy_threshold = bool(settings['micsettings']['dynamic_energy_threshold'])
+r.dynamic_energy_adjustment_damping = float(settings['micsettings']['dynamic_energy_adjustment_damping'])
+r.dynamic_energy_ratio = float(settings['micsettings']['dynamic_energy_ratio'])
+r.pause_threshold = float(settings['micsettings']['pause_threshold'] ) # seconds of non-speaking audio before a phrase is considered complete
 r.operation_timeout = None  # seconds after an internal operation (e.g., an API request) starts before it times out, or ``None`` for no timeout
-r.phrase_threshold = float(micsettings['phrase_threshold'] ) # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
-r.non_speaking_duration = float(micsettings['non_speaking_duration'] ) # seconds of non-speaking audio to keep on both sides of the recording
+r.phrase_threshold = float(settings['micsettings']['phrase_threshold'] ) # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
+r.non_speaking_duration = float(settings['micsettings']['non_speaking_duration'] ) # seconds of non-speaking audio to keep on both sides of the recording
 #____regognizer vosk_______________________________________________________________________________________________________
 #this is a dump workaround since speech recognitions vosk loader has a hardcoded path to the model, sry, for updateabilite i didn't wanted to change it
 #injecting a changed function, i tryed but didn't work. had problems to access class items from function, so this is ugly but seems to be the cleanest solution so far
@@ -71,6 +72,7 @@ def sound_process(sound_queue,loopdelay):
         time.sleep(loopdelay)
         sound_path = sound_queue.get()  # Wait for a sound path to play
         if sound_path:
+            print("playing", sound_path)
             engine.say(sound_path)
             engine.runAndWait()          
 
@@ -222,11 +224,7 @@ tab_control.add(tab3, text='start')
 
 tab_control.pack(expand=1, fill="both")
 
-data = {
-    'commands': scconfig.commands,
-    'LNG': scconfig.LNG,
-    'micsettings': scconfig.micsettings
-}
+
 start_button = tk.Button(tab3, text="Start Process", command=lambda: start_process(sound_process, command_execution_process, microphone_recognition_process, recognito))
 start_button.grid(row=0, column=0)
 
@@ -236,12 +234,12 @@ stop_button.grid(row=1, column=0)
 status_text = tk.Text(tab3, height=10, width=50)
 status_text.grid(row=2, column=0)
 def delete_row(index):
-    del data['commands'][index]
+    del settings[LNGshort +'commands'][index]
     refresh_display()
     save_config()
 
 def add_row():
-    data['commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
+    settings[LNGshort +'commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
     refresh_display()
 
 def refresh_display():
@@ -255,7 +253,7 @@ def refresh_display():
         header_label = ttk.Label(frame, text=label)
         header_label.grid(row=0, column=i)
 
-    for i, row in enumerate(data['commands']):
+    for i, row in enumerate(settings[LNGshort + 'commands']):
         num = ttk.Label(frame, text=i+1)
         num.grid(row=i+1, column=0)
         for j, (key, value) in enumerate(row.items()):
@@ -278,7 +276,7 @@ def refresh_display():
         delete_button.grid(row=i+1, column=len(header_labels))
         lable_mic = ttk.Label(tab2, text="Mic settings:")
         lable_mic.grid(row=6, column=0,columnspan=2,sticky="w")
-    for i, (key, value) in enumerate(data['micsettings'].items()):
+    for i, (key, value) in enumerate(settings['micsettings'].items()):
         label = ttk.Label(tab2, text=key)
         label.grid(row=i+7, column=0,sticky="e")
         entry = ttk.Entry(tab2, width=10, style='Custom.TEntry')
@@ -298,20 +296,18 @@ def refresh_display():
         blank_label_after = ttk.Label(tab2, text="")
         blank_label_after.grid(row=5, column=0)
     add_button = ttk.Button(frame, text="Add", command=add_row)
-    add_button.grid(row=len(data['commands'])+1, column=len(header_labels))
+    add_button.grid(row=len(settings[LNGshort + 'commands'])+1, column=len(header_labels))
 
 def update_micset(event, key):
-    data['micsettings'][key] = event.widget.get()
+    settings['micsettings'][key] = event.widget.get()
     save_config()
 def update_data(event, i, key):
-    print(i,key)
-    print(data['micsettings'])
-    data['commands'][i][key] = event.widget.get()
+    settings[LNGshort +'commands'][i][key] = event.widget.get()
     save_config()
 
 def change_language(event):
-    data['LNG'] = language_switch.get()
-    set_tts_model_path(data['LNG'])
+    settings['LNG'] = language_switch.get()
+    set_tts_model_path(settings['LNG'])
     save_config()
     message = "Please restart the program to finish language change" 
     messagebox.showinfo("Restart Program", message)
@@ -320,7 +316,7 @@ def change_language(event):
 
 def save_config():
     with open('scconfig.py', 'w') as file:
-        file.write(f"LNG = \"{data['LNG']}\"\ncommands = {data['commands']}\nmicsettings = {data['micsettings']}\n")
+        file.write(f"settings = {settings}")
     getconfig()
 
 
@@ -331,7 +327,7 @@ language_label.grid(row=0, column=0, sticky="w")
 
 languages = ["English", "German"]
 language_switch = ttk.Combobox(tab2, values=languages,width=10)
-language_switch.set(data['LNG'])
+language_switch.set(settings['LNG'])
 language_switch.bind("<<ComboboxSelected>>", change_language)
 language_switch.grid(row=0, column=1)
 
