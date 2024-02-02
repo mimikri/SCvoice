@@ -13,7 +13,7 @@ import multiprocessing
 import os
 
 process = 0
-loopdelay = 0.05
+loopdelay = 0.02
 
 # get settings from settingsfile
 def getconfig():
@@ -172,15 +172,19 @@ def recognito(audio_queue,r,commands_queue,loopdelay):
 
 
 def start_process(sound_process,command_execution_process,microphone_recognition_process,recognito):
+    global command_execution_processo
+    global microphone_processo
+    global recognito_process
+    global sound_processo
     sound_queue = multiprocessing.Queue()
-    sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,loopdelay))
-    sound_process.start()
+    sound_processo = multiprocessing.Process(target=sound_process, args=(sound_queue,loopdelay))
+    sound_processo.start()
     commands_queue = multiprocessing.Queue()
-    command_execution_process = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay))
-    command_execution_process.start()
+    command_execution_processo = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay))
+    command_execution_processo.start()
     audio_queue = multiprocessing.Queue()
-    microphone_process = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r))
-    microphone_process.start()
+    microphone_processo = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r))
+    microphone_processo.start()
     recognito_process = multiprocessing.Process(target=recognito, args=(audio_queue,r,commands_queue,loopdelay))
     recognito_process.start()
 def stop_process():
@@ -191,15 +195,28 @@ def stop_process():
     for processo in processes:
         processo.kill()
 def update_status():
-    global process
+    status_text.delete('1.0', tk.END)
     try:
-        if process.is_alive():
-            status_text.insert(tk.END, 'Process up' + "\n")
+        if command_execution_processo.is_alive():
+            status_text.insert(tk.END, 'command execution process up' + "\n")
         else:
-            status_text.insert(tk.END, 'Process down' + "\n")
-    except:
-        status_text.insert(tk.END, 'Process down no process' + "\n")
-
+            status_text.insert(tk.END, 'command execution process down' + "\n")
+        if microphone_processo.is_alive():
+            status_text.insert(tk.END, 'microphone process up' + "\n")
+        else:
+            status_text.insert(tk.END, 'microphone process down' + "\n")
+        if recognito_process.is_alive():
+            status_text.insert(tk.END, 'stt process up' + "\n")
+        else:
+            status_text.insert(tk.END, 'stt process down' + "\n")   
+        if sound_processo.is_alive():
+            status_text.insert(tk.END, 'tts process up' + "\n")
+        else:
+            status_text.insert(tk.END, 'tts process down' + "\n")     
+    except Exception as e:
+        print(e)
+        status_text.insert(tk.END, 'no processes to track' + "\n")
+    root.after(1000, update_status) 
 def close_window():
     root.destroy()
     sys.exit()
@@ -352,5 +369,5 @@ style.configure("TNotebook.Tab", background='#111', foreground='#fff',lightcolor
 style.map("TNotebook.Tab", background=[("selected", "#222")])
 refresh_display()
 # Set dark theme colors
-root.after(100, update_status) 
+root.after(1000, update_status) 
 root.mainloop()
