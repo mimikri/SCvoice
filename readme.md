@@ -18,41 +18,22 @@ so the user can tell an order, and the system does it an tells that it did do th
 <br>
 <br>
 
-## warning speech recognition is only german at the moment, working on gui with lang change option<br>
-you can change the vosk model to an english one, and replace all german and DE flags in scvoice.py<br>
-and change the orderlist in scconfig.py - to make it english, will publish a version with language switch as soon as possible.<br>
-<br>
 
-# installation global:  <br>
-download the repo and unzip it to a folder, or use git for it<br>
+# installation <br>
+terminal in the folder of scvoice and start installscript<br>
 <br>
-you can use python of your system, then you have to install: <br>
 ```
-pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
+bash start_scvoice.sh
 ```
 <br>
-<br>
+there a might some additional liberies to be installed via apt/yum etc.
 
-# installation local<br>
-you can also open the terminal in the folder of scvoice and try to install a local python envirement for SCvoice only, to avoid dependency conflicts<br>
-<br>
-make the local python envirement(execute in scvoice folder): <br>
-```
-python3 -m venv venv
-```
-<br>
-install the needed liberies to the local python envirement: <br>
+if you start scvoice from the terminal, there should be a errormessage wicht tellst if something is missing
 
-```
-venv/bin/pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
-```
 <br>
 
 # useage:<br>
-```
-python3 scvoice.py 
-```
-or with local SCvoice only envirement<br>
+
 ```
 venv/bin/python3 scvoice.py 
 ```
