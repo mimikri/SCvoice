@@ -42,6 +42,7 @@ python3 -m venv venv
 ```
 <br>
 install the needed liberies to the local python envirement: <br>
+
 ```
 venv/bin/pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
 ```
