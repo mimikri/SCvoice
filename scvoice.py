@@ -1,10 +1,7 @@
-#!./venv/bin/python3
-#venv/bin/pip3 install speechrecognition pyttsx4 pyautogui pynput pyaudio vosk multiprocessing time
-#4 processes
-#tts
-#stt
-#microphone
-#main
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+import sys  
 import speech_recognition as sr
 import pyttsx4
 import pyautogui
@@ -14,25 +11,22 @@ import json
 keyboard = Controller()
 import multiprocessing
 import os
-from vosk import Model, KaldiRecognizer
 
-
+process = 0
 loopdelay = 0.05
-audiocount = 0
-audioall = 0
+
 # get settings from settingsfile
-import scconfig
-commands = scconfig.commands
-micsettings = scconfig.micsettings
-LNG = scconfig.LNG
-LNGshort = "de" if LNG == "German" else "en"
-
-
-
-
-
-
-
+def getconfig():
+    import scconfig
+    global commands
+    global micsettings
+    global LNG
+    global LNGshort
+    commands = scconfig.commands
+    micsettings = scconfig.micsettings
+    LNG = scconfig.LNG
+    LNGshort = "de" if LNG == "German" else "en"
+getconfig()
 r = sr.Recognizer()
 # Assuming `r` is the speech recognition object
 
@@ -44,7 +38,6 @@ r.pause_threshold = float(micsettings['pause_threshold'] ) # seconds of non-spea
 r.operation_timeout = None  # seconds after an internal operation (e.g., an API request) starts before it times out, or ``None`` for no timeout
 r.phrase_threshold = float(micsettings['phrase_threshold'] ) # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
 r.non_speaking_duration = float(micsettings['non_speaking_duration'] ) # seconds of non-speaking audio to keep on both sides of the recording
-
 #____regognizer vosk_______________________________________________________________________________________________________
 #this is a dump workaround since speech recognitions vosk loader has a hardcoded path to the model, sry, for updateabilite i didn't wanted to change it
 #injecting a changed function, i tryed but didn't work. had problems to access class items from function, so this is ugly but seems to be the cleanest solution so far
@@ -61,7 +54,7 @@ def set_tts_model_path(LNG):
 set_tts_model_path(LNG)
 #___tts successmessage process_____________________________________________________________________________________________
 
-def sound_process(sound_queue,parent_pid):
+def sound_process(sound_queue,loopdelay):
         # Initialize the speech engine
     engine = pyttsx4.init('espeak')
     engine.setProperty('voice', LNG.lower())  # Use the appropriate voice for German language
@@ -74,39 +67,24 @@ def sound_process(sound_queue,parent_pid):
     engine.runAndWait()
     
     
-    countloops = 0
     while True:
         time.sleep(loopdelay)
-        countloops += 1
-        if countloops > 10000:
-            countloops = 0
-            if os.getppid() != parent_pid:
-                break
         sound_path = sound_queue.get()  # Wait for a sound path to play
         if sound_path:
             engine.say(sound_path)
             engine.runAndWait()          
 
-# Start the sound process
-sound_queue = multiprocessing.Queue()
-sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,os.getppid()))
-sound_process.start()
+
 
 
 #___command interpretation and execution process_____________________________________________________________________________________________
 
 # Start the command execution process
-commands_queue = multiprocessing.Queue()
 
-def command_execution_process(sound_queue, commands_queue,parent_pid):
-    countloops = 0
+
+def command_execution_process(sound_queue, commands_queue,loopdelay):
     while True:
         time.sleep(loopdelay)
-        countloops += 1
-        if countloops > 10000:
-            countloops = 0
-            if os.getppid() != parent_pid:
-                break
         voicestring = commands_queue.get()  # Wait for a recognized voice command
         for command in commands:
             if command["order_string"] in voicestring.lower():
@@ -129,9 +107,7 @@ def command_execution_process(sound_queue, commands_queue,parent_pid):
                     sound_queue.put(command['success_message'])
                 except Exception as e:
                     print(e)
-# Start the command execution process
-command_execution_process = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue,os.getppid()))
-command_execution_process.start()
+
 
 
 
@@ -154,42 +130,37 @@ def click_both_buttons(duration):
 #____microphone process____________________________________________________________________________________________
 
 # Define a queue to pass the recognized voice strings from the microphone process to the processing process
-audio_queue = multiprocessing.Queue()
+
 
 # Function to handle microphone input and recognition
-def microphone_recognition_process(audio_queue,r,parent_pid):
+def microphone_recognition_process(audio_queue,r):
     with sr.Microphone(chunk_size=1024) as source:
-        countloops = 0
         while True:
-            countloops += 1
-            if countloops > 10000:
-                countloops = 0
-                if os.getppid() != parent_pid:
-                    break
             audio_queue.put(r.listen(source))
 
-# Start the microphone recognition process
-microphone_process = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r,os.getppid()))
-microphone_process.start()
+
 
 
 #____main loop____________________________________________________________________________________________
 
 # Inside the processing logic
-
-while True:
-    time.sleep(loopdelay)
-    # Check if there's a recognized voice string in the queue
-    if not audio_queue.empty():
-        audio = audio_queue.get()
-        # Process the recognized voice string
-        
-        recognized_text = json.loads(r.recognize_vosk(audio, language="de"))["text"].strip()
-        audioall = audioall +1
-        if recognized_text != "":
-            audiocount = audiocount +1
-            print(f'[{audiocount}/{audioall}] {recognized_text}')
-            commands_queue.put(recognized_text) 
+def recognito(audio_queue,r,commands_queue,loopdelay):
+    audiocount = 0
+    audioall = 0
+    while True:
+        time.sleep(loopdelay)
+        # Check if there's a recognized voice string in the queue
+        if not audio_queue.empty():
+            audio = audio_queue.get()
+            # Process the recognized voice string
+            
+            
+            recognized_text = json.loads(r.recognize_vosk(audio, language=LNGshort))["text"].strip()
+            audioall = audioall +1
+            if recognized_text != "":
+                audiocount = audiocount +1
+                print(f'[{audiocount}/{audioall}] {recognized_text}')
+                commands_queue.put(recognized_text) 
         
            
 
@@ -198,6 +169,192 @@ while True:
 
 
 
+def start_process(sound_process,command_execution_process,microphone_recognition_process,recognito):
+    sound_queue = multiprocessing.Queue()
+    sound_process = multiprocessing.Process(target=sound_process, args=(sound_queue,loopdelay))
+    sound_process.start()
+    commands_queue = multiprocessing.Queue()
+    command_execution_process = multiprocessing.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay))
+    command_execution_process.start()
+    audio_queue = multiprocessing.Queue()
+    microphone_process = multiprocessing.Process(target=microphone_recognition_process, args=(audio_queue,r))
+    microphone_process.start()
+    recognito_process = multiprocessing.Process(target=recognito, args=(audio_queue,r,commands_queue,loopdelay))
+    recognito_process.start()
+def stop_process():
+    processes = multiprocessing.active_children()
+    print(processes)
+    for processo in processes:
+        processo.terminate()
+    for processo in processes:
+        processo.kill()
+def update_status():
+    global process
+    try:
+        if process.is_alive():
+            status_text.insert(tk.END, 'Process up' + "\n")
+        else:
+            status_text.insert(tk.END, 'Process down' + "\n")
+    except:
+        status_text.insert(tk.END, 'Process down no process' + "\n")
+
+def close_window():
+    root.destroy()
+    sys.exit()
+import scconfig
+root = tk.Tk()
+root.title("SCvoice settings")
+root.configure(background='#222')
+
+# Set the window background to transparent
+root.attributes('-alpha', 0.0)
+tab_control = ttk.Notebook(root, style="TNotebook")
+
+tab1 = ttk.Frame(tab_control,padding=20)
+tab_control.add(tab1, text='commands')
+
+tab2 = ttk.Frame(tab_control, padding=20)
+tab2.grid(row=0, column=0, sticky="nsew")
+tab_control.add(tab2, text='language')
+
+tab3 = ttk.Frame(tab_control,padding=20)
+tab_control.add(tab3, text='start')
+
+tab_control.pack(expand=1, fill="both")
+
+data = {
+    'commands': scconfig.commands,
+    'LNG': scconfig.LNG,
+    'micsettings': scconfig.micsettings
+}
+start_button = tk.Button(tab3, text="Start Process", command=lambda: start_process(sound_process, command_execution_process, microphone_recognition_process, recognito))
+start_button.grid(row=0, column=0)
+
+stop_button = tk.Button(tab3, text="Stop Process", command=stop_process)
+stop_button.grid(row=1, column=0)
+
+status_text = tk.Text(tab3, height=10, width=50)
+status_text.grid(row=2, column=0)
+def delete_row(index):
+    del data['commands'][index]
+    refresh_display()
+    save_config()
+
+def add_row():
+    data['commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
+    refresh_display()
+
+def refresh_display():
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+    # Table header
+    header_labels = ['Num', 'Command', 'Keyboard Press', 'Success Message', 'Action Type']
+    widths = [15,15,35]
+    for i, label in enumerate(header_labels):
+        header_label = ttk.Label(frame, text=label)
+        header_label.grid(row=0, column=i)
+
+    for i, row in enumerate(data['commands']):
+        num = ttk.Label(frame, text=i+1)
+        num.grid(row=i+1, column=0)
+        for j, (key, value) in enumerate(row.items()):
+            
+            if key != 'key_type':
+                entry = ttk.Entry(frame, width=widths[j], style='Custom.TEntry')
+                entry.grid(row=i+1, column=j+1)
+                entry.insert(0, value)
+                entry.bind('<KeyRelease>', lambda event, i=i, j=key: update_data(event, i, j))
+            else:
+                # Action Type dropdown
+                action_type_var = ['normal', 'special']
+                action_type_combobox = ttk.Combobox(frame, values=action_type_var,width=10, style='Custom.TCombobox')
+                action_type_combobox.set(value)
+                action_type_combobox.bind("<<ComboboxSelected>>", lambda event, i=i, j=key: update_data(event, i, j))
+                action_type_combobox.grid(row=i+1, column=j+1)
+
+
+        delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i))
+        delete_button.grid(row=i+1, column=len(header_labels))
+        lable_mic = ttk.Label(tab2, text="Mic settings:")
+        lable_mic.grid(row=6, column=0,columnspan=2,sticky="w")
+    for i, (key, value) in enumerate(data['micsettings'].items()):
+        label = ttk.Label(tab2, text=key)
+        label.grid(row=i+7, column=0,sticky="e")
+        entry = ttk.Entry(tab2, width=10, style='Custom.TEntry')
+        entry.grid(row=i+7, column=1)
+        entry.insert(0, str(value))
+        entry.bind('<KeyRelease>', lambda event, key=key: update_micset(event, key))
+
+            # Add a blank row before the horizontal line
+        blank_label_before = ttk.Label(tab2, text="")
+        blank_label_before.grid(row=3, column=0)
+
+        # Create the horizontal line spanning the width of tab2
+        separator = ttk.Separator(tab2, orient="horizontal")
+        separator.grid(row=4, column=0, columnspan=2, sticky="ew")  # Assuming there are 2 columns in tab2
+
+        # Add a blank row after the horizontal line
+        blank_label_after = ttk.Label(tab2, text="")
+        blank_label_after.grid(row=5, column=0)
+    add_button = ttk.Button(frame, text="Add", command=add_row)
+    add_button.grid(row=len(data['commands'])+1, column=len(header_labels))
+
+def update_micset(event, key):
+    data['micsettings'][key] = event.widget.get()
+    save_config()
+def update_data(event, i, key):
+    print(i,key)
+    print(data['micsettings'])
+    data['commands'][i][key] = event.widget.get()
+    save_config()
+
+def change_language(event):
+    data['LNG'] = language_switch.get()
+    set_tts_model_path(data['LNG'])
+    save_config()
+    message = "Please restart the program to finish language change" 
+    messagebox.showinfo("Restart Program", message)
+    stop_process()
+    sys.exit()
+
+def save_config():
+    with open('scconfig.py', 'w') as file:
+        file.write(f"LNG = \"{data['LNG']}\"\ncommands = {data['commands']}\nmicsettings = {data['micsettings']}\n")
+    getconfig()
 
 
 
+
+language_label = ttk.Label(tab2, text="Select Language:")
+language_label.grid(row=0, column=0, sticky="w")
+
+languages = ["English", "German"]
+language_switch = ttk.Combobox(tab2, values=languages,width=10)
+language_switch.set(data['LNG'])
+language_switch.bind("<<ComboboxSelected>>", change_language)
+language_switch.grid(row=0, column=1)
+
+frame = ttk.Frame(tab1, padding="10")
+frame.grid(row=2, column=0)
+
+
+
+style = ttk.Style()
+style.theme_use('alt')  # Use the "alt" theme for more granular customization
+
+# Set custom colors for specific elements
+style.configure('TLabel', foreground='white', background='#222')  # Set label text and background color
+style.configure('TButton', foreground='white', background='#444')  # Set button text and background color
+style.map('TButton', background=[('active', '#333')])  # Set button background color when active
+style.configure('TEntry', fieldbackground='#333', foreground='#fff', bordercolor='#222',insertcolor='white')  # Set entry background, foreground, and border colors
+style.configure('Custom.TCombobox', fieldbackground='#333', foreground='#fff', background='#333', arrowcolor='white')
+style.configure('TFrame', background='#222')  # Set frame background color
+# Add an update function to schedule periodic updates
+style.configure("TNotebook", background='#000',padding=20, foreground='#fff',lightcolor="white", borderwidth=1, font=('Helvetica', '14', 'bold'))
+style.configure("TNotebook.Tab", background='#111', foreground='#fff',lightcolor="white", borderwidth=1, padding=[20, 5], font=('Helvetica', '14', 'bold'))
+style.map("TNotebook.Tab", background=[("selected", "#222")])
+refresh_display()
+# Set dark theme colors
+root.after(100, update_status) 
+root.mainloop()
