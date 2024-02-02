@@ -4,13 +4,15 @@ what it does.
 <br>
 microphone -> stt -> press keys on keyboard -> tts
 <br>
-it is a tiny py script wich, listens to the microphone.
-if the user tells it an order, it turns the audio into text, fullfill the order and tell the user that it has done it.
+it listens to the microphone.<br>
+if the user tells it an order, <br>
+it turns the audio into text, <br>
+fullfill the order and <br>
+tell the user that it has done it.<br>
+
 <br>
-there is a scconfig.py file, wich contains all the possible orders.
-<br>
-the string resulting from the spoken order is compared with the keywords of the orders in scconfig.py file.
-if there is a match, a key is pressed or a key combination, and a successmessage is played.
+the string resulting from the spoken order is compared with the keywords of the orders wich can be set in gui.
+if there is a match, a key is pressed or a key combination, and a successmessage is played. multi commands are possible.
 <br>
 so the user can tell an order, and the system does it an tells that it did do the order.
 <br>
