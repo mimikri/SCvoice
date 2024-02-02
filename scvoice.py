@@ -214,7 +214,6 @@ def update_status():
         else:
             status_text.insert(tk.END, 'tts process down' + "\n")     
     except Exception as e:
-        print(e)
         status_text.insert(tk.END, 'no processes to track' + "\n")
     root.after(1000, update_status) 
 def close_window():
