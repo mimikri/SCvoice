@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import sys  
 import speech_recognition as sr
 import pyttsx4
@@ -10,7 +11,6 @@ import json
 keyboard = Controller()
 import multiprocessing
 import os
-import scvoice_functions
 
 process = 0
 loopdelay = 0.05
@@ -313,6 +313,10 @@ def change_language(event):
     data['LNG'] = language_switch.get()
     set_tts_model_path(data['LNG'])
     save_config()
+    message = "Please restart the program to finish language change" 
+    messagebox.showinfo("Restart Program", message)
+    stop_process()
+    sys.exit()
 
 def save_config():
     with open('scconfig.py', 'w') as file:
