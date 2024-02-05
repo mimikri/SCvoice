@@ -74,6 +74,16 @@ pyttsx4 with espeak as tts<br>
 pyautogui and pynput for button presses and hotkeys<br>
 multiprocessing to make commandexecution faster, for multicommands<br>
 
+# props go to
 
+alphacephei https://alphacephei.com/
+they provide exellent small and fast regognitiion models open source <3<3<3
+all the models used here are made by them (VOSK)
+espeak-ng provide open source tts, wich we use here as main option for audio success message output <3<3<3
+and all the great python liberies:
+pyttsx4
+speech_recognition
+pyautogui
+pynput
 
 

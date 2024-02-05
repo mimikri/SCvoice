@@ -5,43 +5,104 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     #___tts successmessage process_____________________________________________________________________________________________
 
-    def sound_process(sound_queue,loopdelay,LNG,LNGshort,operatingsystem):
-        from subprocess import call
-        import espeakng
+    def sound_process(sound_queue,loopdelay,LNG,operatingsystem,wavfiles,audio_device):
+     
+
+        import pyaudio
+        import wave
+        pa = pyaudio.PyAudio()
+        print(audio_device)
+        desired_output_device_index = None if audio_device == '' else audio_device
+        print(f"Using output device index {desired_output_device_index} for audio output")
+        device_list = [pa.get_device_info_by_index(i) for i in range(pa.get_device_count())]
+        output_devices = device_list
+        print(output_devices)
+        while True:
+            time.sleep(loopdelay)
+            sound_path = sound_queue.get()  # Wait for a sound path to play
+            if sound_path:
+                print("playing", wavfiles[sound_path])
+                print(f"Using output device index {desired_output_device_index} for audio output")
+                with wave.open(wavfiles[sound_path], 'rb') as wave_file:
+                    stream_params = {
+                        'format': pa.get_format_from_width(wave_file.getsampwidth()),
+                        'channels': wave_file.getnchannels(),
+                        'rate': 44100,
+                        'output': True,
+                        'output_device_index': desired_output_device_index
+                    }
+
+                    stream = pa.open(**stream_params)
+                    data = wave_file.readframes(1024)
+                    while data:
+                        stream.write(data)
+                        data = wave_file.readframes(1024)
+
+                    stream.stop_stream()
+                    stream.close()
+        pa.terminate()
+
+                    #if operatingsystem == 'windows':
+                #    call(["espeak/espeak","-s140 -ven+18 -z",sound_path])
+                #else:
+                #    engine.say(sound_path, wait4prev=True)
+                #engine.runAndWait()  
+               
+          #from subprocess import call #call exefile with args in folder, so user don't has to install espeak-ng
+        #import espeakng
         # Initialize the speech engine
-        engine = espeakng.Speaker('espeak')
+        #engine = espeakng.Speaker('espeak')
         #voices = engine.getProperty('voices')
         #print(voices)
         #engine.setProperty('voice', voices[11].id)  # Use the appropriate voice for German language
         #engine.setProperty('rate', 150)
         #engine.setProperty('pitch', 0.5)
-        engine.voice = LNGshort
-        engine.pitch = 0.5
-        engine.wpm = 150
-        if LNG == "German":
-            if operatingsystem == 'windows':
-                call(["espeak/espeak","-s140 -ven+18 -z","aktiviere sprachassistenten"])
-            else:
-                engine.say("aktiviere sprachassistenten", wait4prev=True)
-        else:
-            engine.say("activating speech assistant", wait4prev=True)
+        #engine.voice = LNGshort
+        #engine.pitch = 0.5
+        #engine.wpm = 150
+        #if LNG == "German":
+        #    if operatingsystem == 'windows':
+        #        call(["espeak/espeak","-s140 -ven+18 -z","aktiviere sprachassistenten"])
+        #    else:
+        #        engine.say("aktiviere sprachassistenten", wait4prev=True)
+        #else:
+        #    engine.say("activating speech assistant", wait4prev=True)
         #engine.runAndWait()
-        
-        
-        while True:
-            time.sleep(loopdelay)
-            sound_path = sound_queue.get()  # Wait for a sound path to play
-            if sound_path:
-                print("playing", sound_path)
-                if operatingsystem == 'windows':
-                    call(["espeak/espeak","-s140 -ven+18 -z",sound_path])
-                else:
-                    engine.say(sound_path, wait4prev=True)
-                #engine.runAndWait()          
 
+        """
+        import ctypes
 
+        # Load the libespeak-ng.dll library
+        espeak = ctypes.CDLL("path_to_libespeak-ng.dll")
 
+        # Define the function prototypes
+        espeak.espeak_Initialize.restype = ctypes.c_int
+        espeak.espeak_Initialize.argtypes = []
 
+        espeak.espeak_SetParameter.restype = ctypes.c_int
+        espeak.espeak_SetParameter.argtypes = [ctypes.c_int, ctypes.c_int]
+
+        # Initialize espeak
+        espeak.espeak_Initialize()
+
+        # Set parameters
+        parameter_voice = 1  # Example voice parameter ID
+        parameter_wpm = 80  # Example words per minute (WPM) value
+        parameter_pitch = 50  # Example pitch value
+        parameter_amplitude = 100  # Example amplitude value
+
+        espeak.espeak_SetParameter(parameter_voice, 1)  # Set the voice parameter
+        espeak.espeak_SetParameter(parameter_wpm, 200)  # Set the WPM parameter
+        espeak.espeak_SetParameter(parameter_pitch, 70)  # Set the pitch parameter
+        espeak.espeak_SetParameter(parameter_amplitude, 150)  # Set the amplitude parameter
+        text = "Hello, World! aktiviere sprachassistenten"
+        espeak.espeak_Synth(text.encode('utf-8'), len(text), 0, 0)
+
+        #other aproach
+        #if platform.system() == "Windows":
+        #    self.executable = "path_to_libespeak-ng.dll"  # Update with the actual path to the libespeak-ng.dll file
+        # insert into init function for windows to use local dll instead of system installed one
+        """
     #___command interpretation and execution process_____________________________________________________________________________________________
 
     def command_execution_process(sound_queue, commands_queue,loopdelay,commands):
@@ -80,6 +141,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def microphone_recognition_process(audio_queue,r,sr):
         
+        #list mics
+        print(sr.Microphone.list_microphone_names())
         with sr.Microphone() as source:
             while True:
                 audio = r.listen(source)
@@ -90,7 +153,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     #____stt process____________________________________________________________________________________________
 
-    def recognito(audio_queue,r,commands_queue,loopdelay,LNGshort):
+    def recognito(audio_queue,r,commands_queue,loopdelay,LNG):
         import json
         audiocount = 0
         audioall = 0
@@ -100,7 +163,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             if not audio_queue.empty():
                 audio = audio_queue.get()
                 # Process the recognized voice string
-                recognized_text = json.loads(r.recognize_vosk(audio, language=LNGshort))["text"].strip()
+                recognized_text = json.loads(r.recognize_vosk(audio, language=LNG))["text"].strip()
                 audioall = audioall +1
                 if recognized_text != "":
                     audiocount = audiocount +1
@@ -139,7 +202,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     import sys  
     import multiprocess
     import os
-    multiprocess.freeze_support()
+    import wave
+    multiprocess.freeze_support()#for windows, else would open new windows for multiprocesses
     operatingsystem = 'linux'
     if os.name == 'nt':
         operatingsystem = 'windows'
@@ -159,17 +223,15 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     #this is a dump workaround since speech recognitions vosk loader has a hardcoded path to the model, sry, for updateabilite i didn't wanted to change it
     #injecting a changed function, i tryed but didn't work. had problems to access class items from function, so this is ugly but seems to be the cleanest solution so far
     #when stying with vosk only KaldiRecognizer is an option
-    def set_tts_model_path(LNG):
-        if os.path.exists('Englishmodel') and os.path.exists('model'):
-            os.rename('model', 'Germanmodel')
-        elif os.path.exists('model') and os.path.exists('Germanmodel'):
-            os.rename('model', 'Englishmodel')
-        if LNG == "English":
-            os.rename('Englishmodel', 'model')
-        elif LNG == "German":
-            os.rename('Germanmodel', 'model')
+    def set_tts_model_path(LNG, oldlng="English"):
+        if os.path.exists('model'):
+            os.rename('model', oldlng + 'model')
+            os.rename(LNG + 'model', 'model')
+        else:
+            os.rename(LNG + 'model', 'model')
+
     print('rename models')
-    set_tts_model_path(settings['LNG'])
+    set_tts_model_path(settings['LNG'],settings['LNG'])
     print('done')
 
 
@@ -178,9 +240,15 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     #____gui functions____________________________________________________________________________________________________
     def start_process(sound_process,command_execution_process,microphone_recognition_process,recognito,operatingsystem,loopdelay,settings):
         if operatingsystem == 'windows':
-            multiprocess.set_start_method('spawn')  # Set the start method before creating processes
+            multiprocess.set_start_method('spawn')  # Set the start method before creating processes, for win cause it handels multiprocesses different from linux
+        print('generate new success messages')
+  
+        
+        wavfiles = generate_wav_files('success_messages',[obj['success_message'] for obj in settings[settings['LNG'] +'commands']])
         print('register recognizer')
         r = sr.Recognizer() #  `r` is the speech recognition object
+    
+       
         print('set recognizer config')
         r.energy_threshold = float(settings['micsettings']['energy_threshold'])  # minimum audio energy to consider for recording
         r.dynamic_energy_threshold = bool(settings['micsettings']['dynamic_energy_threshold'])
@@ -196,20 +264,105 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         global recognito_process
         global sound_processo
         sound_queue = multiprocess.Queue()
-        sound_processo = multiprocess.Process(target=sound_process, args=(sound_queue,loopdelay,settings['LNG'],settings['LNGshort'],operatingsystem), name='sound_process')
+
+
+
+
+        sound_processo = multiprocess.Process(target=sound_process, args=(sound_queue,loopdelay,settings['LNG'],operatingsystem,wavfiles,settings['audio_device']), name='sound_process')
         print(' - sound process')
         sound_processo.start()
+     
+
+
         commands_queue = multiprocess.Queue()
-        command_execution_processo = multiprocess.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay,settings[settings['LNGshort'] +'commands']), name='command_process')
+        command_execution_processo = multiprocess.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay,settings[settings['LNG'] +'commands']), name='command_process')
         print(' - command process')
         command_execution_processo.start()
+        
+
+
         audio_queue = multiprocess.Queue()
         microphone_processo = multiprocess.Process(target=microphone_recognition_process, args=(audio_queue,r,sr), name='microphone_process')
         print(' - microphone process')
         microphone_processo.start()
-        recognito_process = multiprocess.Process(target=recognito, args=(audio_queue,r,commands_queue,loopdelay,settings['LNGshort']), name='recognito_process')
+
+
+
+        recognito_process = multiprocess.Process(target=recognito, args=(audio_queue,r,commands_queue,loopdelay,settings['LNG']), name='recognito_process')
         print(' - speech to text process')
         recognito_process.start()
+
+
+
+#____must be in seperat threads cause using pyaudio, 
+# if pyaudio is not terminated sr.microphone does not work, and if it is terminated multithreads can not access default audio output device anymore
+#therefor functions wich need pyaudio have to run in seprerate threads, to ensure mich access and audio output access in multiprocesses
+
+
+    def audiofunctions(function_name, *args):
+        queue = multiprocess.Queue()
+
+        audio_multiprocess = multiprocess.Process(target=function_name, args=(queue, *args))
+        audio_multiprocess.start()
+        result = queue.get()
+        audio_multiprocess.terminate()
+        return result
+    def get_output_device_list(queue):
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        device_list = [pa.get_device_info_by_index(i) for i in range(pa.get_device_count())]
+        queue.put(device_list)
+
+    def test_output_device(queue,output_index):
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        if 0 <= output_index < pa.get_device_count():
+            output_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True, output_device_index=output_index)
+
+            # Test the selected audio output device by playing an audio file
+            print("Testing audio output... Playing test sound")
+            with wave.open('success_messages/Landing_gear.wav', 'rb') as wf:
+                test_signal = wf.readframes(wf.getnframes())
+                output_stream.write(test_signal)
+
+            # Close the output stream
+            output_stream.stop_stream()
+            output_stream.close()
+        else:
+            print("Invalid audio output device index selected.")
+        queue.put('done')
+
+    def select_output_device():
+        print('collect output devices')
+        output_devices = audiofunctions(get_output_device_list)
+        output_var.set("Select Output Device")
+        output_menu['menu'].delete(0, 'end')
+        for i, device in enumerate(output_devices):
+            output_menu['menu'].add_command(label=f"{i}: {device['name']}", command=lambda index=i, name=device['name']: set_output_device(index, name))
+        
+       
+        
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#________________normal ui functions_____________________
 
     def get_microphones():
         print('start mic search')
@@ -254,12 +407,12 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         root.destroy()
         sys.exit()
     def delete_row(index):
-        del settings[settings['LNGshort'] +'commands'][index]
+        del settings[settings['LNG'] +'commands'][index]
         refresh_display()
         save_config()
 
     def add_row():
-        settings[settings['LNGshort'] +'commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
+        settings[settings['LNG'] +'commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
         refresh_display()
 
 
@@ -267,15 +420,17 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         settings['micsettings'][key] = event.widget.get()
         save_config()
     def update_data(event, i, key):
-        settings[settings['LNGshort'] +'commands'][i][key] = event.widget.get()
+        settings[settings['LNG'] +'commands'][i][key] = event.widget.get()
         save_config()
 
     def change_language(event):
+        oldlng = settings['LNG']
         settings['LNG'] = language_switch.get()
-        settings['LNGshort'] = "de" if settings['LNG'] == "German" else "en"
-        set_tts_model_path(settings['LNG'])
+        set_tts_model_path(settings['LNG'],oldlng)
+        refresh_display()
+
         save_config()
-        set_tts_model_path(settings['LNG'])#chang model paths, so the stt process can pick the right model
+        #set_tts_model_path(settings['LNG'])#chang model paths, so the stt process can pick the right model
         #message = "Please restart the program to finish language change" 
         #messagebox.showinfo("Restart Program", message)
         #stop_process()
@@ -296,9 +451,58 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
 
+    def set_output_device(index, device_name):
+        output_var.set(f"{index}: {device_name}")
+        settings['audio_device'] = index
 
 
 
+    def test_devices():
+            output_index = output_var.get()
+            output_index = int(output_index.split(":")[0])
+            audiofunctions(test_output_device,output_index)
+
+
+
+    def generate_wav_files(folder_path, messages):
+        import array
+        import pyttsx4
+        from pydub import AudioSegment
+        wavfiles = {}
+        engine = pyttsx4.init()
+        for message in messages:
+            
+            sanitized_message = sanitize_message(message)
+            wav_file_name = sanitized_message + ".wav"
+            wav_file_path = os.path.abspath(os.path.join(folder_path, wav_file_name))
+            wavfiles[message] = wav_file_path #maybe bad when message is not suitable for index
+            
+            if not os.path.exists(wav_file_path):
+                # WAV file does not exist, generate it using pyttsx3
+                print(wav_file_path)
+                engine.setProperty('rate', 140) 
+                engine.save_to_file(message, wav_file_path)
+                engine.runAndWait()
+                
+                # Load the WAV file
+                audio = AudioSegment.from_wav(wav_file_path)
+                # Resample the audio to the target sample rate (e.g., 44100)
+                resampled_audio = audio.set_frame_rate(44100)
+                # Save the resampled audio to a new WAV file
+                resampled_audio.export(wav_file_path, format="wav")
+        engine.stop()
+        return wavfiles
+                
+
+        
+    def sanitize_message(message):
+        import re
+        sanitized_message = re.sub(r'[^a-zA-Z0-9]', '_', message)
+        return sanitized_message
+
+    # Example usage
+   
+   
 
     #____start gui_______________________________________________________________________________________________________
 
@@ -341,7 +545,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             header_label = ttk.Label(frame, text=label)
             header_label.grid(row=0, column=i)
 
-        for i, row in enumerate(settings[settings['LNGshort'] + 'commands']):
+        for i, row in enumerate(settings[settings['LNG'] + 'commands']):
             num = ttk.Label(frame, text=i+1)
             num.grid(row=i+1, column=0)
             for j, (key, value) in enumerate(row.items()):
@@ -361,42 +565,62 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
             delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i))
-            delete_button.grid(row=i+1, column=len(header_labels))
+            delete_button.grid(row=i+1, column=len(header_labels)+1,sticky="e")
             lable_mic = ttk.Label(tab2, text="Mic settings:")
-            lable_mic.grid(row=6, column=0,columnspan=2,sticky="w")
+            lable_mic.grid(row=8, column=0,columnspan=2,sticky="w")
         for i, (key, value) in enumerate(settings['micsettings'].items()):
             label = ttk.Label(tab2, text=key)
-            label.grid(row=i+7, column=0,sticky="e")
+            label.grid(row=i+9, column=0,sticky="e")
             entry = ttk.Entry(tab2, width=10, style='Custom.TEntry')
-            entry.grid(row=i+7, column=1)
+            entry.grid(row=i+9, column=1)
             entry.insert(0, str(value))
             entry.bind('<KeyRelease>', lambda event, key=key: update_micset(event, key))
-
-                # Add a blank row before the horizontal line
-            blank_label_before = ttk.Label(tab2, text="")
-            blank_label_before.grid(row=3, column=0)
-
+        blank_label_before = ttk.Label(tab2, text="")
+        blank_label_before.grid(row=2, column=0)
             # Create the horizontal line spanning the width of tab2
-            separator = ttk.Separator(tab2, orient="horizontal")
-            separator.grid(row=4, column=0, columnspan=2, sticky="ew")  # Assuming there are 2 columns in tab2
+        separator = ttk.Separator(tab2, orient="horizontal")
+        separator.grid(row=3, column=0, columnspan=2, sticky="ew")  # Assuming there are 2 columns in tab2
 
-            # Add a blank row after the horizontal line
-            blank_label_after = ttk.Label(tab2, text="")
-            blank_label_after.grid(row=5, column=0)
+        blank = ttk.Label(frame, text="  ")
+        blank.grid(row=1, column=len(header_labels))
         add_button = ttk.Button(frame, text="Add", command=add_row)
-        add_button.grid(row=len(settings[settings['LNGshort'] + 'commands'])+1, column=len(header_labels))
+        add_button.grid(row=len(settings[settings['LNG'] + 'commands'])+1, column=len(header_labels)+1)
+
 
     language_label = ttk.Label(tab2, text="Select Language:")
     language_label.grid(row=0, column=0, sticky="w")
 
-    languages = ["English", "German"]
+
+    path_to_search = './'
+    directories = [d for d in os.listdir(path_to_search) if os.path.isdir(os.path.join(path_to_search, d))]
+    languages = [d.split('model', 1)[0].strip('_') for d in directories if 'model' in d.lower() and d.split('model', 1)[0].strip('_')]
+    languages[0] = settings['LNG']
     language_switch = ttk.Combobox(tab2, values=languages,width=10)
     language_switch.set(settings['LNG'])
     language_switch.bind("<<ComboboxSelected>>", change_language)
-    language_switch.grid(row=0, column=1)
+    language_switch.grid(row=0, column=1,sticky="e")
+# Create dropdowns for selecting input and output devices
+    label = ttk.Label(tab2, text='Select Output Device:')
+    label.grid(row=4, column=0,sticky="w")
+    output_var = tk.StringVar(tab2)
+    output_menu = tk.OptionMenu(tab2, output_var, "Select Output Device")
+    output_menu.grid(row=4,column=1, sticky='e')
+    # Add a blank row before the horizontal line
+    test_button1 = tk.Button(tab2, text="Test output", command=lambda: test_devices())
+    test_button1.grid(row=5,column=1,sticky='e')
+    blank_label_before = ttk.Label(tab2, text="")
+    blank_label_before.grid(row=6, column=0)
+    # Create the horizontal line spanning the width of tab2
+    separator = ttk.Separator(tab2, orient="horizontal")
+    separator.grid(row=7, column=0, columnspan=2, sticky="ew")  # Assuming there are 2 columns in tab2
 
+    # Add a blank row after the horizontal line
+
+
+    select_output_device()
+    generate_wav_files('success_messages', [obj['success_message'] for obj in settings[settings['LNG'] +'commands']])
     frame = ttk.Frame(tab1, padding="10")
-    frame.grid(row=2, column=0)
+    frame.pack()
 
     style = ttk.Style()
     style.theme_use('alt')  # Use the "alt" theme for more granular customization
