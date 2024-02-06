@@ -11,10 +11,10 @@ fullfill the order and <br>
 tell the user that it has done it.<br>
 
 <br>
-the string resulting from the spoken order is compared with the keywords of the orders wich can be set in gui.
-if there is a match, a key is pressed or a key combination, and a successmessage is played. multi commands are possible.
+the string resulting from the spoken order is compared with the keywords of the orders wich can be set in gui.<br>
+if there is a match, a key is pressed or a key combination, and a successmessage is played. multi commands are possible.<br>
 <br>
-so the user can tell an order, and the system does it an tells that it did do the order.
+so the user can tell an order, and the system does it an tells that it did do the order.<br>
 <br>
 <br>
 
@@ -23,24 +23,29 @@ so the user can tell an order, and the system does it an tells that it did do th
 terminal in the folder of scvoice and start installscript<br>
 <br>
 ```
-bash start_scvoice.sh
+bash install_scvoice.sh
 ```
 <br>
-there a might some additional liberies to be installed via apt/yum etc.
-
-if you start scvoice from the terminal, there should be a errormessage wicht tellst if something is missing
+installs
+ffmpeg for audio
+espeak for text to speach
+local python envirement
+py libs in local envirement wicht are needed
+then starts scvoice
 
 <br>
 
 # useage:<br>
-
+start scvoice.sh<br>
+-might need reightclick -> settings -> permission -> run file as a progamm , to be started per click<br>
+<br>
+or in terminal navigate to the folder and enter<br>
 ```
 venv/bin/python3 scvoice.py 
 ```
+
 <br>
-speech recognition uses a german vosk model at the moment, wich is in /model/ folder.<br>
-the model can be switched to an english one, and the scconfig.py file then has to be changed, to english keywords. <br>
-also the tts voice needs to be changed to english in the mainscript. <br>
+
 
 # known errors<br>
 there are some errormessages under linux according to alsa and jackserver, this can be ingnored, <br>
@@ -76,14 +81,15 @@ multiprocessing to make commandexecution faster, for multicommands<br>
 
 # props go to
 
-alphacephei https://alphacephei.com/
-they provide exellent small and fast regognitiion models open source <3<3<3
-all the models used here are made by them (VOSK)
-espeak-ng provide open source tts, wich we use here as main option for audio success message output <3<3<3
-and all the great python liberies:
-pyttsx4
-speech_recognition
-pyautogui
-pynput
+alphacephei https://alphacephei.com/<br>
+they provide exellent small and fast regognitiion models open source <3<3<3<br>
+all the models used here are made by them (VOSK)<br>
+espeak-ng provide open source tts, wich we use here as main option for audio success message output <3<3<3<br>
+and all the great python liberies:<br>
+pyttsx4<br>
+speech_recognition<br>
+pyautogui<br>
+pynput<br>
+...
 
 
