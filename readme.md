@@ -26,12 +26,12 @@ terminal in the folder of scvoice and start installscript<br>
 bash install_scvoice.sh
 ```
 <br>
-installs
-ffmpeg for audio
-espeak for text to speach
-local python envirement
-py libs in local envirement wicht are needed
-then starts scvoice
+installs<br>
+ffmpeg for audio<br>
+espeak for text to speach<br>
+local python envirement<br>
+py libs in local envirement wicht are needed<br>
+then starts scvoice<br>
 
 <br>
 
