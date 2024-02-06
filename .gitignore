@@ -1,3 +1,5 @@
 venv/
 clean/
 __pycache__/
+success_messages/*.wav
+model/
