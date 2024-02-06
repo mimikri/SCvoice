@@ -12,7 +12,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         import wave
         pa = pyaudio.PyAudio()
         print(audio_device)
-        desired_output_device_index = None if audio_device == '' else audio_device
+        default_output_index = pa.get_default_output_device_info()["index"]
+        desired_output_device_index = default_output_index if audio_device == 'None' or audio_device == '' else audio_device
         print(f"Using output device index {desired_output_device_index} for audio output")
         device_list = [pa.get_device_info_by_index(i) for i in range(pa.get_device_count())]
         output_devices = device_list
@@ -40,7 +41,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
                     stream.stop_stream()
                     stream.close()
-        pa.terminate()
+        
 
                     #if operatingsystem == 'windows':
                 #    call(["espeak/espeak","-s140 -ven+18 -z",sound_path])
@@ -208,10 +209,13 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     if os.name == 'nt':
         operatingsystem = 'windows'
    
-    def getconfig(): # get settings from settingsfile
-        import scconfig
-        settings = scconfig.settings
+    import json
+
+    def getconfig(): 
+        with open('scconfig.json', 'r', encoding='utf-8') as file:
+            settings = json.load(file)
         return settings
+
     print('get config')
     settings = getconfig()
 
@@ -239,8 +243,9 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     #____gui functions____________________________________________________________________________________________________
     def start_process(sound_process,command_execution_process,microphone_recognition_process,recognito,operatingsystem,loopdelay,settings):
-        if operatingsystem == 'windows':
-            multiprocess.set_start_method('spawn')  # Set the start method before creating processes, for win cause it handels multiprocesses different from linux
+        print("start processes")
+        #if operatingsystem == 'windows':
+        #    multiprocess.set_start_method('spawn')  # Set the start method before creating processes, for win cause it handels multiprocesses different from linux
         print('generate new success messages')
   
         
@@ -264,10 +269,6 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         global recognito_process
         global sound_processo
         sound_queue = multiprocess.Queue()
-
-
-
-
         sound_processo = multiprocess.Process(target=sound_process, args=(sound_queue,loopdelay,settings['LNG'],operatingsystem,wavfiles,settings['audio_device']), name='sound_process')
         print(' - sound process')
         sound_processo.start()
@@ -307,38 +308,77 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         result = queue.get()
         audio_multiprocess.terminate()
         return result
-    def get_output_device_list(queue):
-        import pyaudio
-        pa = pyaudio.PyAudio()
-        device_list = [pa.get_device_info_by_index(i) for i in range(pa.get_device_count())]
-        queue.put(device_list)
+    
+
+    
+
+    
+
+
 
     def test_output_device(queue,output_index):
         import pyaudio
-        pa = pyaudio.PyAudio()
-        if 0 <= output_index < pa.get_device_count():
-            output_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True, output_device_index=output_index)
+        import wave
+        try:
+            pa = pyaudio.PyAudio()
+            if 0 <= output_index < pa.get_device_count():
+                output_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True, output_device_index=output_index)
 
-            # Test the selected audio output device by playing an audio file
-            print("Testing audio output... Playing test sound")
-            with wave.open('success_messages/Landing_gear.wav', 'rb') as wf:
-                test_signal = wf.readframes(wf.getnframes())
-                output_stream.write(test_signal)
+                # Test the selected audio output device by playing an audio file
+                print("Testing audio output... Playing test sound")
+                with wave.open('test.wav', 'rb') as wf:
+                    test_signal = wf.readframes(wf.getnframes())
+                    output_stream.write(test_signal)
 
-            # Close the output stream
-            output_stream.stop_stream()
-            output_stream.close()
-        else:
-            print("Invalid audio output device index selected.")
+                # Close the output stream
+                output_stream.stop_stream()
+                output_stream.close()
+            else:
+                print("Invalid audio output device index selected.")
+        except:
+            print('bad device')
         queue.put('done')
+
+
+
+    def get_output_device_list(queue, id_activ):
+        import pyaudio
+        pa = pyaudio.PyAudio()
+        output_devices = []
+        for i in range(pa.get_device_count()):
+            device_info = pa.get_device_info_by_index(i)
+            try:
+
+                if device_info["maxOutputChannels"] > 0 and device_info["maxInputChannels"] == 0:
+                    # Handle potential encoding issues
+                    output_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True, output_device_index=device_info["index"])
+                    output_stream.stop_stream()
+                    output_stream.close()
+
+                    device_name = device_info["name"].encode('latin1', errors='replace').decode('utf-8', errors='replace')
+                    device_info["name"] = device_name
+                    output_devices.append(device_info)
+
+            except:
+                print('bad device:' + str(i) + ' ' + device_info["name"])
+            
+        if isinstance(id_activ, int) and 0 <= id_activ < len(output_devices):
+            active_output = output_devices[id_activ]
+        else:
+            active_output = pa.get_default_output_device_info()
+            active_output["name"] = active_output["name"].encode('latin1', errors='replace').decode('utf-8', errors='replace')
+
+        queue.put({'output_devices': output_devices, 'active_output': active_output})
+
 
     def select_output_device():
         print('collect output devices')
-        output_devices = audiofunctions(get_output_device_list)
-        output_var.set("Select Output Device")
+        output_devices = audiofunctions(get_output_device_list, settings['audio_device'])
         output_menu['menu'].delete(0, 'end')
+        output_var.set(f"{output_devices['active_output']['index']}: {output_devices['active_output']['name']}")
+        output_devices = output_devices['output_devices']
         for i, device in enumerate(output_devices):
-            output_menu['menu'].add_command(label=f"{i}: {device['name']}", command=lambda index=i, name=device['name']: set_output_device(index, name))
+            output_menu['menu'].add_command(label=f"{device['index']}. {device['name']}", command=lambda index=device['index'], name=device['name']: set_output_device(index, name))
         
        
         
@@ -426,6 +466,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     def change_language(event):
         oldlng = settings['LNG']
         settings['LNG'] = language_switch.get()
+        if (settings['LNG'] + 'commands') not in settings:
+            settings[settings['LNG'] + 'commands'] = settings[oldlng + 'commands']
         set_tts_model_path(settings['LNG'],oldlng)
         refresh_display()
 
@@ -436,11 +478,13 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         #stop_process()
         #sys.exit()
 
+ 
+
     def save_config():
-        with open('scconfig.py', 'wb') as file:
-            strs = f"settings = {settings}"
-            file.write(strs.encode('utf-8'))
-        getconfig()#reload config , not needed cause settings gets updayed on the fly
+        with open('scconfig.json', 'w') as file:  # Use 'w' mode for writing text
+            json.dump(settings, file, indent=4)  # Serialize settings to JSON and write to file
+
+
 
 
 
@@ -465,9 +509,14 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
     def generate_wav_files(folder_path, messages):
+        print('generating wav files')
         import array
         import pyttsx4
+        print('jo')
+ 
         from pydub import AudioSegment
+        if operatingsystem == 'windows':
+            AudioSegment.ffmpeg = os.path.abspath("ffmpegwin64/bin/ffmpeg.exe") 
         wavfiles = {}
         engine = pyttsx4.init()
         for message in messages:
@@ -594,11 +643,11 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     path_to_search = './'
     directories = [d for d in os.listdir(path_to_search) if os.path.isdir(os.path.join(path_to_search, d))]
     languages = [d.split('model', 1)[0].strip('_') for d in directories if 'model' in d.lower() and d.split('model', 1)[0].strip('_')]
-    languages[0] = settings['LNG']
-    language_switch = ttk.Combobox(tab2, values=languages,width=10)
+    languages.append(settings['LNG'])  # Add settings['LNG'] to the languages list
+    language_switch = ttk.Combobox(tab2, values=languages, width=10)
     language_switch.set(settings['LNG'])
     language_switch.bind("<<ComboboxSelected>>", change_language)
-    language_switch.grid(row=0, column=1,sticky="e")
+    language_switch.grid(row=0, column=1, sticky="e")
 # Create dropdowns for selecting input and output devices
     label = ttk.Label(tab2, text='Select Output Device:')
     label.grid(row=4, column=0,sticky="w")
@@ -612,9 +661,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     blank_label_before.grid(row=6, column=0)
     # Create the horizontal line spanning the width of tab2
     separator = ttk.Separator(tab2, orient="horizontal")
-    separator.grid(row=7, column=0, columnspan=2, sticky="ew")  # Assuming there are 2 columns in tab2
-
-    # Add a blank row after the horizontal line
+    separator.grid(row=7, column=0, columnspan=2, sticky="ew")  
 
 
     select_output_device()
