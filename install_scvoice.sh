@@ -28,7 +28,7 @@ else
 fi
 
 # List of required Python libraries
-required_libraries=("speechrecognition" "espeakng" "pyautogui" "pynput" "pyaudio" "vosk" "multiprocess" "pyttsx4" "comtypes")
+required_libraries=("speechrecognition" "espeakng" "pyautogui" "pynput" "pyaudio" "vosk" "multiprocess" "pyttsx4" "comtypes" "pydub")
 
 # Iterate through the list and check/install each library
 for library in "${required_libraries[@]}"; do
