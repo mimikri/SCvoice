@@ -108,7 +108,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def command_execution_process(sound_queue, commands_queue,loopdelay,commands):
         from pynput.keyboard import Key, Controller
-        import pyautogui
+      
         keyboard = Controller()
         while True:
             time.sleep(loopdelay)
@@ -117,24 +117,31 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                 if command["order_string"] in voicestring.lower():
                     print('command:', command["success_message"], ' key_to_press:', command["key_to_press"])
                     try:
-                        if "_" in command["key_to_press"]:
-                            if command["key_to_press"] == "maus_left":
-                                click_both_buttons(3)
-                            keys = command["key_to_press"].split("_")
-                            pyautogui.hotkey(*keys)
-                            if command["order_string"] == "info":
-                                pyautogui.typewrite("r_DisplayInfo 3")
-                                pyautogui.hotkey("enter")
-                                pyautogui.hotkey("shiftright", "^")
-                        else:
-                            if command["key_type"] == "special":
-                                pyautogui.press(command["key_to_press"])
+                      
+                        keys = command["key_to_press"].split(" ")
+                        print(keys)
+                        for key_sequence in keys:
+                            if "++" in key_sequence:#hotkey blocks
+                                key_sequence_hotkey = key_sequence.split("++")
+                                for i, key in enumerate(key_sequence_hotkey):
+                                    with keyboard.pressed(Key[key]):
+                                        if i == len(key_sequence_hotkey) - 2:
+                                            keyboard.press(Key[key_sequence_hotkey[i+1]])
+                                            time.sleep(0.15)
+                                            keyboard.release(Key[key_sequence_hotkey[i+1]])
+
                             else:
-                                keyboard.type(command["key_to_press"])
+                                if key_sequence == "write":#type spoken text 
+                                    keyboard.type(voicestring.replace(command["order_string"],''))
+                                else:
+                                    #normal keys
+                                    keyboard.press(Key[key_sequence])
+                                    time.sleep(0.15)
+                                    keyboard.release(Key[key_sequence])
+ 
                         sound_queue.put(command['success_message'])
                     except Exception as e:
                         print(e)
-
 
 
 
@@ -515,8 +522,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         print('jo')
  
         from pydub import AudioSegment
-        if operatingsystem == 'windows':
-            AudioSegment.ffmpeg = os.path.abspath("ffmpegwin64/bin/ffmpeg.exe") 
+        AudioSegment.ffmpeg = os.path.abspath("ffmpegwin64/bin/ffmpeg.exe") 
         wavfiles = {}
         engine = pyttsx4.init()
         for message in messages:
@@ -558,6 +564,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     print('start gui: set tk root')
     root = tk.Tk()
     root.title("SCvoice settings")
+
+    root.geometry("800x650")
     root.configure(background='#222')
 
     print('set tabs')
@@ -588,7 +596,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         for widget in frame.winfo_children():
             widget.destroy()
         # Table header
-        header_labels = ['Num', 'Command', 'Keyboard Press', 'Success Message', 'Action Type']
+        header_labels = ['Num', 'Command', 'Keyboard Press', 'Success Message']
         widths = [15,15,35]
         for i, label in enumerate(header_labels):
             header_label = ttk.Label(frame, text=label)
@@ -604,13 +612,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                     entry.grid(row=i+1, column=j+1)
                     entry.insert(0, value)
                     entry.bind('<KeyRelease>', lambda event, i=i, j=key: update_data(event, i, j))
-                else:
-                    # Action Type dropdown
-                    action_type_var = ['normal', 'special']
-                    action_type_combobox = ttk.Combobox(frame, values=action_type_var,width=10, style='Custom.TCombobox')
-                    action_type_combobox.set(value)
-                    action_type_combobox.bind("<<ComboboxSelected>>", lambda event, i=i, j=key: update_data(event, i, j))
-                    action_type_combobox.grid(row=i+1, column=j+1)
+
 
 
             delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i))
@@ -666,13 +668,29 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     select_output_device()
     generate_wav_files('success_messages', [obj['success_message'] for obj in settings[settings['LNG'] +'commands']])
-    frame = ttk.Frame(tab1, padding="10")
-    frame.pack()
 
+    # Create a canvas for tab1
+    canvas = tk.Canvas(tab1, highlightthickness=0, bg="#222")
+    canvas.pack(side="left", fill="both", expand=True)
+
+    # Add a scrollbar to the canvas
+    scrollbar = tk.Scrollbar(tab1, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # Create a frame inside the canvas to hold the content of tab1
+    frame = ttk.Frame(canvas)
+    canvas.create_window((0, 0), window=frame, anchor="nw")
+
+    # Add the content to the scrollable frame
+    # (your existing content here)
+
+    # Configure the canvas to update scroll region when the size of the frame changes
+    frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
     style = ttk.Style()
     style.theme_use('alt')  # Use the "alt" theme for more granular customization
 
-    # Set custom colors for specific elements
+    style.configure('TCanvas', background='#222')
     style.configure('TLabel', foreground='white', background='#222')  # Set label text and background color
     style.configure('TButton', foreground='white', background='#444')  # Set button text and background color
     style.map('TButton', background=[('active', '#333')])  # Set button background color when active
@@ -685,5 +703,6 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     style.map("TNotebook.Tab", background=[("selected", "#222")])
     refresh_display()
     # Set dark theme colors
+    
     root.after(1000, update_status) 
     root.mainloop()
