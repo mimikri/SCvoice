@@ -124,11 +124,20 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                             if "++" in key_sequence:#hotkey blocks
                                 key_sequence_hotkey = key_sequence.split("++")
                                 for i, key in enumerate(key_sequence_hotkey):
-                                    with keyboard.pressed(Key[key]):
-                                        if i == len(key_sequence_hotkey) - 2:
-                                            keyboard.press(Key[key_sequence_hotkey[i+1]])
-                                            time.sleep(0.15)
-                                            keyboard.release(Key[key_sequence_hotkey[i+1]])
+                                    
+                                    if len(key) > 1:
+                                        key = Key[key].value
+                                    print('hot key down', key,i)
+                                    keyboard.press(key)
+                                    time.sleep(0.15)
+
+                                for i, key in enumerate(key_sequence_hotkey):
+                                    
+                                    if len(key) > 1:
+                                        key = Key[key].value
+                                    print('hot key up', key,i)
+                                    keyboard.release(key)
+                                    time.sleep(0.15)
 
                             else:
                                 if key_sequence == "write":#type spoken text 
@@ -221,6 +230,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     def getconfig(): 
         with open('scconfig.json', 'r', encoding='utf-8') as file:
             settings = json.load(file)
+        with open('commandlists/' + settings['commandlist'] + '.json', 'r', encoding='utf-8') as file:
+            settings['commands'] = json.load(file)
         return settings
 
     print('get config')
@@ -256,7 +267,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         print('generate new success messages')
   
         
-        wavfiles = generate_wav_files('success_messages',[obj['success_message'] for obj in settings[settings['LNG'] +'commands']])
+        wavfiles = generate_wav_files('success_messages',[obj['success_message'] for obj in settings['commands']])
         print('register recognizer')
         r = sr.Recognizer() #  `r` is the speech recognition object
     
@@ -283,7 +294,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
         commands_queue = multiprocess.Queue()
-        command_execution_processo = multiprocess.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay,settings[settings['LNG'] +'commands']), name='command_process')
+        command_execution_processo = multiprocess.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay,settings['commands']), name='command_process')
         print(' - command process')
         command_execution_processo.start()
         
@@ -454,12 +465,12 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         root.destroy()
         sys.exit()
     def delete_row(index):
-        del settings[settings['LNG'] +'commands'][index]
+        del settings['commands'][index]
         refresh_display()
         save_config()
 
     def add_row():
-        settings[settings['LNG'] +'commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
+        settings['commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
         refresh_display()
 
 
@@ -467,14 +478,14 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         settings['micsettings'][key] = event.widget.get()
         save_config()
     def update_data(event, i, key):
-        settings[settings['LNG'] +'commands'][i][key] = event.widget.get()
+        settings['commands'][i][key] = event.widget.get()
         save_config()
 
     def change_language(event):
         oldlng = settings['LNG']
         settings['LNG'] = language_switch.get()
-        if (settings['LNG'] + 'commands') not in settings:
-            settings[settings['LNG'] + 'commands'] = settings[oldlng + 'commands']
+        #if (settings['LNG'] + 'commands') not in settings:
+        #    settings[settings['LNG'] + 'commands'] = settings[oldlng + 'commands']
         set_tts_model_path(settings['LNG'],oldlng)
         refresh_display()
 
@@ -488,14 +499,23 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
  
 
     def save_config():
+        print('saving config')
+        with open('commandlists/' + settings['commandlist'] + '.json', 'w') as file:  # Use 'w' mode for writing text
+            json.dump(settings['commands'], file, indent=4)  # Serialize settings to JSON and write to file 
+        tempsettings = settings
+        del tempsettings['commands']      
         with open('scconfig.json', 'w') as file:  # Use 'w' mode for writing text
-            json.dump(settings, file, indent=4)  # Serialize settings to JSON and write to file
+            json.dump(tempsettings, file, indent=4)  # Serialize settings to JSON and write to file
+        del tempsettings
 
 
 
 
 
-
+    def change_commandlist(event):
+        selected_file = commandlist_select.get()
+        # Perform action with the selected file
+        print(f"Selected file: {selected_file}")
 
 
 
@@ -574,6 +594,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     tab1 = ttk.Frame(tab_control,padding=20)
     tab_control.add(tab1, text='commands')
 
+
     tab2 = ttk.Frame(tab_control, padding=20)
     tab2.grid(row=0, column=0, sticky="nsew")
     tab_control.add(tab2, text='language')
@@ -592,6 +613,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     status_text = tk.Text(tab3, height=10, width=50)
     status_text.grid(row=2, column=0)
+
     def refresh_display():
         for widget in frame.winfo_children():
             widget.destroy()
@@ -600,23 +622,23 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         widths = [15,15,35]
         for i, label in enumerate(header_labels):
             header_label = ttk.Label(frame, text=label)
-            header_label.grid(row=0, column=i)
+            header_label.grid(row=1, column=i)
 
-        for i, row in enumerate(settings[settings['LNG'] + 'commands']):
+        for i, row in enumerate(settings['commands']):
             num = ttk.Label(frame, text=i+1)
-            num.grid(row=i+1, column=0)
+            num.grid(row=i+2, column=0)
             for j, (key, value) in enumerate(row.items()):
                 
                 if key != 'key_type':
                     entry = ttk.Entry(frame, width=widths[j], style='Custom.TEntry')
-                    entry.grid(row=i+1, column=j+1)
+                    entry.grid(row=i+2, column=j+1)
                     entry.insert(0, value)
                     entry.bind('<KeyRelease>', lambda event, i=i, j=key: update_data(event, i, j))
 
 
 
             delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i))
-            delete_button.grid(row=i+1, column=len(header_labels)+1,sticky="e")
+            delete_button.grid(row=i+2, column=len(header_labels)+1,sticky="e")
             lable_mic = ttk.Label(tab2, text="Mic settings:")
             lable_mic.grid(row=8, column=0,columnspan=2,sticky="w")
         for i, (key, value) in enumerate(settings['micsettings'].items()):
@@ -635,7 +657,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         blank = ttk.Label(frame, text="  ")
         blank.grid(row=1, column=len(header_labels))
         add_button = ttk.Button(frame, text="Add", command=add_row)
-        add_button.grid(row=len(settings[settings['LNG'] + 'commands'])+1, column=len(header_labels)+1)
+        add_button.grid(row=len(settings['commands'])+1, column=len(header_labels)+1)
 
 
     language_label = ttk.Label(tab2, text="Select Language:")
@@ -646,7 +668,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     directories = [d for d in os.listdir(path_to_search) if os.path.isdir(os.path.join(path_to_search, d))]
     languages = [d.split('model', 1)[0].strip('_') for d in directories if 'model' in d.lower() and d.split('model', 1)[0].strip('_')]
     languages.append(settings['LNG'])  # Add settings['LNG'] to the languages list
-    language_switch = ttk.Combobox(tab2, values=languages, width=10)
+    language_switch = ttk.Combobox(tab2, style='Custom.TCombobox', values=languages, width=10)
     language_switch.set(settings['LNG'])
     language_switch.bind("<<ComboboxSelected>>", change_language)
     language_switch.grid(row=0, column=1, sticky="e")
@@ -667,8 +689,23 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
     select_output_device()
-    generate_wav_files('success_messages', [obj['success_message'] for obj in settings[settings['LNG'] +'commands']])
-
+    generate_wav_files('success_messages', [obj['success_message'] for obj in settings['commands']])
+    file_list = [f for f in os.listdir('commandlists') if f.endswith('.json')]
+    
+    commandlist_select = ttk.Combobox(tab1, style='Custom.TCombobox', values=file_list, width=30)
+    commandlist_select.bind("<<ComboboxSelected>>", change_commandlist)
+    commandlist_select.set(settings['commandlist'])
+    commandlist_select.pack()
+    entry = ttk.Entry(tab1, width=10, style='Custom.TEntry')
+    entry.pack()
+    entry.insert(0, '')
+    entry.bind('<KeyRelease>', lambda event, key=1: update_micset(event, 1))
+    space_above = tk.Frame(tab1, height=10)
+    space_above.pack()
+    separator = ttk.Separator(tab1, orient='horizontal')
+    separator.pack(fill='x')
+    space_below = tk.Frame(tab1, height=10)
+    space_below.pack()
     # Create a canvas for tab1
     canvas = tk.Canvas(tab1, highlightthickness=0, bg="#222")
     canvas.pack(side="left", fill="both", expand=True)
@@ -680,10 +717,9 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     # Create a frame inside the canvas to hold the content of tab1
     frame = ttk.Frame(canvas)
+
     canvas.create_window((0, 0), window=frame, anchor="nw")
 
-    # Add the content to the scrollable frame
-    # (your existing content here)
 
     # Configure the canvas to update scroll region when the size of the frame changes
     frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
