@@ -7,23 +7,23 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def sound_process(sound_queue,loopdelay,LNG,operatingsystem,wavfiles,audio_device):
      
-
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'starting soundprocess')
         import pyaudio
         import wave
         pa = pyaudio.PyAudio()
-        print(audio_device)
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],audio_device)
         default_output_index = pa.get_default_output_device_info()["index"]
         desired_output_device_index = default_output_index if audio_device == 'None' or audio_device == '' else audio_device
-        print(f"Using output device index {desired_output_device_index} for audio output")
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"Using output device index {desired_output_device_index} for audio output")
         device_list = [pa.get_device_info_by_index(i) for i in range(pa.get_device_count())]
         output_devices = device_list
-        print(output_devices)
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],output_devices)
         while True:
             time.sleep(loopdelay)
             sound_path = sound_queue.get()  # Wait for a sound path to play
             if sound_path:
-                print("playing", wavfiles[sound_path])
-                print(f"Using output device index {desired_output_device_index} for audio output")
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"playing", wavfiles[sound_path])
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"Using output device index {desired_output_device_index} for audio output")
                 with wave.open(wavfiles[sound_path], 'rb') as wave_file:
                     stream_params = {
                         'format': pa.get_format_from_width(wave_file.getsampwidth()),
@@ -54,7 +54,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         # Initialize the speech engine
         #engine = espeakng.Speaker('espeak')
         #voices = engine.getProperty('voices')
-        #print(voices)
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],voices)
         #engine.setProperty('voice', voices[11].id)  # Use the appropriate voice for German language
         #engine.setProperty('rate', 150)
         #engine.setProperty('pitch', 0.5)
@@ -108,49 +108,87 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def command_execution_process(sound_queue, commands_queue,loopdelay,commands):
         from pynput.keyboard import Key, Controller
-      
+        from pynput.mouse import Button, Controller as MouseController
+        last_order = [0,'last order']#[0] a timstamp, when the last command was executed, [1] the last command
         keyboard = Controller()
+        listen_state = 'on'
+
         while True:
             time.sleep(loopdelay)
             voicestring = commands_queue.get()  # Wait for a recognized voice command
             for command in commands:
                 if command["order_string"] in voicestring.lower():
-                    print('command:', command["success_message"], ' key_to_press:', command["key_to_press"])
+                    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'command:', command["success_message"], ' key_to_press:', command["key_to_press"])
                     try:
-                      
-                        keys = command["key_to_press"].split(" ")
-                        print(keys)
-                        for key_sequence in keys:
-                            if "++" in key_sequence:#hotkey blocks
-                                key_sequence_hotkey = key_sequence.split("++")
-                                for i, key in enumerate(key_sequence_hotkey):
-                                    
-                                    if len(key) > 1:
-                                        key = Key[key].value
-                                    print('hot key down', key,i)
-                                    keyboard.press(key)
-                                    time.sleep(0.15)
+                        if command["key_to_press"] == 'on':
+                            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'turn on')
+                            listen_state = 'on'
+                            continue
+                        elif command["key_to_press"] == 'off':
+                            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'turn off')
+                            listen_state = 'off'
+                            continue
+                        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'status:', listen_state)
+                        if listen_state == 'on':
+                            keys = command["key_to_press"].split(" ")
+                            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],keys)
+                            for key_sequence in keys:
+                                if "++" in key_sequence:#hotkey blocks
+                                    presstime = 0.15
+                                    explode = key_sequence.split(":") if ":" in key_sequence else [key_sequence]
+                                    if len(explode) > 1:
+                                        print('set presstime to',explode[1])
+                                        presstime = int(explode[1])/1000
+                                    key_sequence = explode[0]
+                                    key_sequence_hotkey = key_sequence.split("++")
+                                    for i, key in enumerate(key_sequence_hotkey):
+                                        
+                                        if len(key) > 1:
+                                            key = Key[key].value
+                                        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'hot key down', key,i)
+                                        keyboard.press(key)
+                                        time.sleep(0.15)
+                                    time.sleep(presstime)
+                                    for i, key in enumerate(key_sequence_hotkey):
+                                        
+                                        if len(key) > 1:
+                                            key = Key[key].value
+                                        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'hot key up', key,i)
+                                        keyboard.release(key)
+                                        time.sleep(0.15)
 
-                                for i, key in enumerate(key_sequence_hotkey):
-                                    
-                                    if len(key) > 1:
-                                        key = Key[key].value
-                                    print('hot key up', key,i)
-                                    keyboard.release(key)
-                                    time.sleep(0.15)
-
-                            else:
-                                if key_sequence == "write":#type spoken text 
-                                    keyboard.type(voicestring.replace(command["order_string"],''))
                                 else:
-                                    #normal keys
-                                    keyboard.press(Key[key_sequence])
-                                    time.sleep(0.15)
-                                    keyboard.release(Key[key_sequence])
- 
-                        sound_queue.put(command['success_message'])
+                                    if key_sequence == "write":#type spoken text 
+                                        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'type keys')
+                                        keyboard.type(voicestring.replace(command["order_string"],''))
+                                    elif key_sequence == "on":
+                                        print('turn on')
+                                    elif key_sequence == "off":
+                                        print('turn off')
+                                    
+
+                                    else:
+                                        #normal keys
+                                        presstime = 0.15
+                                        if len(key_sequence) > 1:
+                                            explode = key_sequence.split(":") if ":" in key_sequence else [key_sequence]
+                                            if len(explode) > 1:
+                                                print('set presstime to',explode[1])
+                                                presstime = int(explode[1])/1000
+                                            key_sequence = explode[0]
+                                            if key_sequence == 'pause':
+                                                time.sleep(presstime if presstime > 0.15 else 0.5)
+                                                continue
+                                            if len(key_sequence) > 1:
+                                                key_sequence = Key[key_sequence].value
+                                        
+                                        keyboard.press(key_sequence)
+                                        time.sleep(presstime)
+                                        keyboard.release(key_sequence)
+    
+                            sound_queue.put(command['success_message'])
                     except Exception as e:
-                        print(e)
+                        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'error' ,str(e))
 
 
 
@@ -159,8 +197,11 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     def microphone_recognition_process(audio_queue,r,sr):
         
         #list mics
-        print(sr.Microphone.list_microphone_names())
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],sr.Microphone.list_microphone_names())
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'start microphone process. ajusting listener')
+        
         with sr.Microphone() as source:
+            r.adjust_for_ambient_noise(source)
             while True:
                 audio = r.listen(source)
                 audio_queue.put(audio)
@@ -184,7 +225,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                 audioall = audioall +1
                 if recognized_text != "":
                     audiocount = audiocount +1
-                    print(f'[{audiocount}/{audioall}] {recognized_text}')
+                    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f'[{audiocount}/{audioall}] {recognized_text}')
                     commands_queue.put(recognized_text) 
             
             
@@ -211,34 +252,52 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     process = 0
     loopdelay = 0.02
-    print('hallo') 
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'starting a main process') 
     import tkinter as tk
-    from tkinter import ttk
-    from tkinter import messagebox
+    from tkinter import ttk , messagebox , simpledialog
     import speech_recognition as sr
     import sys  
     import multiprocess
     import os
     import wave
+    import copy
     multiprocess.freeze_support()#for windows, else would open new windows for multiprocesses
     operatingsystem = 'linux'
     if os.name == 'nt':
         operatingsystem = 'windows'
    
     import json
-
+    global settings
+    global wavfiles
+    specialkeys = ['alt', 'alt_gr', 'alt_r', 'backspace', 'caps_lock', 'cmd', 'cmd_r', 'ctrl', 'ctrl_r', 'delete', 'down', 'end', 'enter', 'esc', 'f1', 'f10', 'f11', 'f12', 'f13', 'f14', 'f15', 'f16', 'f17', 'f18', 'f19', 'f2', 'f20', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'home', 'insert', 'left', 'media_next', 'media_play_pause', 'media_previous', 'media_volume_down', 'media_volume_mute', 'media_volume_up', 'menu', 'num_lock', 'page_down', 'page_up', 'pause', 'print_screen', 'right', 'scroll_lock', 'shift', 'shift_r', 'space', 'tab', 'up']
+    mousebuttons = ['button10', 'button11', 'button12', 'button13', 'button14', 'button15', 'button16', 'button17', 'button18', 'button19', 'button20', 'button21', 'button22', 'button23', 'button24', 'button25', 'button26', 'button27', 'button28', 'button29', 'button30', 'button8', 'button9', 'left', 'middle', 'right', 'scroll_down', 'scroll_left', 'scroll_right', 'scroll_up']
     def getconfig(): 
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'get config from','scconfig.json')
         with open('scconfig.json', 'r', encoding='utf-8') as file:
             settings = json.load(file)
-        with open('commandlists/' + settings['commandlist'] + '.json', 'r', encoding='utf-8') as file:
-            settings['commands'] = json.load(file)
         return settings
 
-    print('get config')
+    
     settings = getconfig()
 
+    
+
+    def get_commandlist(commandlist_name = settings['commandlist']):
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'get commands from' ,'commandlists/'+ commandlist_name + '.json')
+        if not os.path.exists('commandlists/' + commandlist_name + '.json'):
+            commands = [{'order_string':'example', 'key_to_press': 'n', 'success_message': 'test 1 2 3 4 5 6 7 8 9 10 test' }]
+        else:
+            with open('commandlists/' + commandlist_name + '.json', 'r', encoding='utf-8') as file:
+                commands = json.load(file)
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'get commandlist',settings)
+        if not commands:
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'no commands found in','commandlists/' + settings['commandlist'] + '.json' , 'therefor setting exalmple list')
+            commands = [{'order_string':'example', 'key_to_press': 'n', 'success_message': 'test 1 2 3 4 5 6 7 8 9 10 test' }]
+
+        return commands
 
     
+    settings['commands'] = get_commandlist()
 
 
     #____regognizer vosk_______________________________________________________________________________________________________
@@ -252,27 +311,27 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         else:
             os.rename(LNG + 'model', 'model')
 
-    print('rename models')
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'rename models')
     set_tts_model_path(settings['LNG'],settings['LNG'])
-    print('done')
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'done')
 
 
 
 
     #____gui functions____________________________________________________________________________________________________
     def start_process(sound_process,command_execution_process,microphone_recognition_process,recognito,operatingsystem,loopdelay,settings):
-        print("start processes")
+        
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"start processes")
         #if operatingsystem == 'windows':
         #    multiprocess.set_start_method('spawn')  # Set the start method before creating processes, for win cause it handels multiprocesses different from linux
-        print('generate new success messages')
-  
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'generate new success messages')
         
-        wavfiles = generate_wav_files('success_messages',[obj['success_message'] for obj in settings['commands']])
-        print('register recognizer')
-        r = sr.Recognizer() #  `r` is the speech recognition object
-    
        
-        print('set recognizer config')
+        wavfiles = generate_wav_files('success_messages',[obj['success_message'] for obj in settings['commands']])
+        
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'register recognizer')
+        r = sr.Recognizer() #  `r` is the speech recognition object
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'set recognizer config')
         r.energy_threshold = float(settings['micsettings']['energy_threshold'])  # minimum audio energy to consider for recording
         r.dynamic_energy_threshold = bool(settings['micsettings']['dynamic_energy_threshold'])
         r.dynamic_energy_adjustment_damping = float(settings['micsettings']['dynamic_energy_adjustment_damping'])
@@ -281,34 +340,39 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         r.operation_timeout = None  # seconds after an internal operation (e.g., an API request) starts before it times out, or ``None`` for no timeout
         r.phrase_threshold = float(settings['micsettings']['phrase_threshold'] ) # minimum seconds of speaking audio before we consider the speaking audio a phrase - values below this are ignored (for filtering out clicks and pops)
         r.non_speaking_duration = float(settings['micsettings']['non_speaking_duration'] ) # seconds of non-speaking audio to keep on both sides of the recording
-        print('start processes')
+        
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'stop already running processes')
+        stop_process()#if there are processes running, stop them
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'start new processes')
+        
         global command_execution_processo
         global microphone_processo
         global recognito_process
         global sound_processo
+
+       
         sound_queue = multiprocess.Queue()
         sound_processo = multiprocess.Process(target=sound_process, args=(sound_queue,loopdelay,settings['LNG'],operatingsystem,wavfiles,settings['audio_device']), name='sound_process')
-        print(' - sound process')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---start sound process')
         sound_processo.start()
      
 
-
+      
         commands_queue = multiprocess.Queue()
         command_execution_processo = multiprocess.Process(target=command_execution_process, args=(sound_queue, commands_queue,loopdelay,settings['commands']), name='command_process')
-        print(' - command process')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---start command process')
         command_execution_processo.start()
         
 
-
         audio_queue = multiprocess.Queue()
         microphone_processo = multiprocess.Process(target=microphone_recognition_process, args=(audio_queue,r,sr), name='microphone_process')
-        print(' - microphone process')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---start microphone process')
         microphone_processo.start()
 
 
-
+        
         recognito_process = multiprocess.Process(target=recognito, args=(audio_queue,r,commands_queue,loopdelay,settings['LNG']), name='recognito_process')
-        print(' - speech to text process')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---start speech to text process')
         recognito_process.start()
 
 
@@ -343,7 +407,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                 output_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, output=True, output_device_index=output_index)
 
                 # Test the selected audio output device by playing an audio file
-                print("Testing audio output... Playing test sound")
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"Testing audio output... Playing test sound")
                 with wave.open('test.wav', 'rb') as wf:
                     test_signal = wf.readframes(wf.getnframes())
                     output_stream.write(test_signal)
@@ -352,9 +416,9 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                 output_stream.stop_stream()
                 output_stream.close()
             else:
-                print("Invalid audio output device index selected.")
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"Invalid audio output device index selected.")
         except:
-            print('bad device')
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'bad device')
         queue.put('done')
 
 
@@ -378,7 +442,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                     output_devices.append(device_info)
 
             except:
-                print('bad device:' + str(i) + ' ' + device_info["name"])
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'bad device:' + str(i) + ' ' + device_info["name"])
             
         if isinstance(id_activ, int) and 0 <= id_activ < len(output_devices):
             active_output = output_devices[id_activ]
@@ -390,7 +454,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
     def select_output_device():
-        print('collect output devices')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'collect output devices')
         output_devices = audiofunctions(get_output_device_list, settings['audio_device'])
         output_menu['menu'].delete(0, 'end')
         output_var.set(f"{output_devices['active_output']['index']}: {output_devices['active_output']['name']}")
@@ -399,7 +463,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             output_menu['menu'].add_command(label=f"{device['index']}. {device['name']}", command=lambda index=device['index'], name=device['name']: set_output_device(index, name))
         
        
-        
+
 
 
         
@@ -423,22 +487,24 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 #________________normal ui functions_____________________
 
     def get_microphones():
-        print('start mic search')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'start mic search')
         #for index, name in enumerate(sr.Microphone.list_microphone_names()):
         #    try:
         #        with sr.Microphone(device_index=48,chunk_size=4000) as source:
         #            audio = r.listen(source)
-        #            print("Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(index, name))
+        #            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"Microphone with name \"{1}\" found for `Microphone(device_index={0})`".format(index, name))
         #    except Exception as e:
-        #        print('nope')
+        #        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'nope')
 
-    def stop_process():
+    def stop_process():#stop all if not specified
         processes = multiprocess.active_children()
-        print(processes)
+       
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],processes)
         for processo in processes:
-            processo.terminate()
+                processo.terminate()
         for processo in processes:
-            processo.kill()
+                processo.kill()
+
     def update_status():
         status_text.delete('1.0', tk.END)
         try:
@@ -461,13 +527,15 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         except Exception as e:
             status_text.insert(tk.END, 'no processes to track' + "\n")
         root.after(1000, update_status) 
+
     def close_window():
         root.destroy()
         sys.exit()
+
     def delete_row(index):
         del settings['commands'][index]
         refresh_display()
-        save_config()
+        save_commands()
 
     def add_row():
         settings['commands'].append({"order_string": "", "key_to_press": "", "success_message": "", "key_type": ""})
@@ -476,10 +544,13 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def update_micset(event, key):
         settings['micsettings'][key] = event.widget.get()
+        
         save_config()
+
     def update_data(event, i, key):
         settings['commands'][i][key] = event.widget.get()
-        save_config()
+        
+        save_commands()
 
     def change_language(event):
         oldlng = settings['LNG']
@@ -490,41 +561,129 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         refresh_display()
 
         save_config()
-        #set_tts_model_path(settings['LNG'])#chang model paths, so the stt process can pick the right model
-        #message = "Please restart the program to finish language change" 
-        #messagebox.showinfo("Restart Program", message)
-        #stop_process()
-        #sys.exit()
+        
+
 
  
+    def change_commandlist(event):
+        
+        selected_file = commandlist_select.get()
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'change commandlist to', selected_file)
+        settings['commandlist'] = selected_file
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---------------------------',settings)
+        
+        try:
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'get commands from','commandlists/' + selected_file + '.json')
+            with open('commandlists/' + selected_file + '.json', 'r', encoding='utf-8') as file:
+                settings['commands'] = json.load(file)
+                #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'---------------------',settings)
+        except FileNotFoundError:
+            # Handle the case where the file does not exist
+            settings['commands'] = []  # Assign an empty list if the file does not exist
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"File 'commandlists/{selected_file}.json' not found. Initializing 'commands' as an empty list.")
+        
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"Selected file: {selected_file}")
+        save_config()
+        refresh_display()
+
+
+
+
 
     def save_config():
-        print('saving config')
-        with open('commandlists/' + settings['commandlist'] + '.json', 'w') as file:  # Use 'w' mode for writing text
-            json.dump(settings['commands'], file, indent=4)  # Serialize settings to JSON and write to file 
-        tempsettings = settings
-        del tempsettings['commands']      
-        with open('scconfig.json', 'w') as file:  # Use 'w' mode for writing text
-            json.dump(tempsettings, file, indent=4)  # Serialize settings to JSON and write to file
-        del tempsettings
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'saving config')
+        
+        # Save settings['commands'] to 'commandlists/{selected_file}.json'
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'write to file:','commandlists/' + settings['commandlist'] + '.json')
+        with open('commandlists/' + settings['commandlist'] + '.json', 'w') as file:
+            json.dump(settings['commands'], file, indent=4)
+        
+        # Create a deep copy of the settings dictionary
+        tempsettings = copy.deepcopy(settings)
+        
+        # Remove the 'commands' key from the temporary settings
+        if 'commands' in tempsettings:
+            del tempsettings['commands']
+        
+        # Save the modified settings to 'scconfig.json'
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'write to file:','scconfig.json')
+        with open('scconfig.json', 'w') as file:
+            json.dump(tempsettings, file, indent=4)
+        
+    def save_commands():
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'saving commands')
+        
+        # Save settings['commands'] to 'commandlists/{selected_file}.json'
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'write to file:','commandlists/' + settings['commandlist'] + '.json')
+        with open('commandlists/' + settings['commandlist'] + '.json', 'w') as file:
+            json.dump(settings['commands'], file, indent=4)
+     
+    
+    def delete_commandlist():
+        global settings
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'settings in delete command function:',settings)
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'try to delete commandlist:', settings['commandlist'])
+        file_path = 'commandlists/' + settings['commandlist'] + '.json'  # Replace with the actual file path
+        if os.path.exists(file_path):
+            overwrite = messagebox.askyesno("Commandlist delete!", "do you really want to delete the commandlist(" + settings['commandlist'] + ")?")
+            if overwrite:
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'delete commandlist:',file_path)
+                os.remove(file_path)
+               
+                values = list(commandlist_select['values'])  # Convert values to a list
+                values.remove(settings['commandlist'])  # Remove the value
+                commandlist_select['values'] = values  # Update the values of the combobox
 
+                settings['commandlist'] = values[0]
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'activate commandlist',settings['commandlist'])
+                commandlist_select.set(settings['commandlist'])
+                settings['commands'] = get_commandlist(settings['commandlist'])
+                save_config()
+                refresh_display()
+            else:
+                pass  
+        else:
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"The file {file_path} does not exist.")
 
+    def add_commandlist():
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'add commandlist')
+        if new_commandlist_entry.get() == "":
+            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'no comandlist name entered.')
+            return
+        settings['commandlist'] = new_commandlist_entry.get()
+        settings['commands'] = [{'order_string':'example', 'key_to_press': 'n', 'success_message': 'test 1 2 3 4 5 6 7 8 9 10 test' }]
+        file_path = 'commandlists/' + settings['commandlist'] + '.json'
+        if os.path.exists(file_path):
+            if overwrite_prompt():
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'commandlist creation confirmed')
+                pass
+            else:
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'comandlist creation canceld')
+                return
+            
+        else:
+            commandlist_select['values'] = (commandlist_select['values']) + (settings['commandlist'],)
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'write to file:','commandlists/' + settings['commandlist'] + '.json')    
+        with open('commandlists/' + settings['commandlist'] + '.json', 'w') as file:
+            json.dump(settings['commands'], file, indent=4)
 
+        commandlist_select.set(settings['commandlist'])
+        save_config()
+        refresh_display()
 
-
-    def change_commandlist(event):
-        selected_file = commandlist_select.get()
-        # Perform action with the selected file
-        print(f"Selected file: {selected_file}")
-
-
-
-
+    def overwrite_prompt():
+        overwrite = messagebox.askyesno("Commandlist Overwrite", "The file already exists. Do you reaaly want to overwrite it, by makeing a new commandlist with the same name?")
+        if overwrite:
+            return True
+        else:
+            return False
 
 
     def set_output_device(index, device_name):
         output_var.set(f"{index}: {device_name}")
         settings['audio_device'] = index
+        save_config()
+        
 
 
 
@@ -533,13 +692,124 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             output_index = int(output_index.split(":")[0])
             audiofunctions(test_output_device,output_index)
 
+    def help_function():
+        text = "special keys:\n" + "\n".join(specialkeys)
+        top = tk.Toplevel(root)  # Use the existing root window for the Toplevel
+        top.geometry("800x600")
+        top.title("SCvoice Help")
+
+        canvas = tk.Canvas(top)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(top, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame, anchor='nw')
+        label0_text = """SCvoice Help
+        ____________________________________________________________
+        hotkeys:
+
+        hotkeys are buttons wich are pressed togethe. 
+        to use hotkeys you can conntect the keys as follows
+        "shift++a" = "A"
+        
+        ------------------------------------------------------------
+
+        pressing mutlible keys:
+
+        "a b c" = "abc"
+        
+        ------------------------------------------------------------
+        
+        write text:
+
+        the "write" key writes the text sayed after the command.
+        if command is "order" and keyboard press is "write"
+        and you say: "odrer this is a test" 
+        the output will be:"this is a test"
+        write can be combined too.
+
+        ------------------------------------------------------------
+        
+        press time:
+
+        each key can be augmented with a time in ms to press.
+        "a:1000" = presses "a" for 1 second.
+        "shift++a:1000" = presses "shift+a" for 1 second. 
+
+        ------------------------------------------------------------
+        
+        pause command:
+
+        the "pause" command waits for the given time in ms, before going on.
+        "a pause:1000 shift+a" = "a" waits 1 second, then "shift+a"
+        default pause is 500ms
+        "a pause shift++a" = "a" waits 500ms, then "shift++a"
+
+        ------------------------------------------------------------
+        
+        on and off:
+
+        the "on" command and "off" commands can be used to turn the command execution on and off.
+        "on" = when keywords are triggert a command is executed.
+        "off" = when keywords are triggert a command is nothing is done, exept the keyword is "on". 
+
+        ------------------------------------------------------------
+        combination:
+
+        "a b c shift++a a b c" = "abcAabc"
+        ____________________________________________________________
+
+        custom soundfiles:
+
+        custom commandlists:
+
+        adding recognition models:
+        ____________________________________________________________
+        
+        Keyboard special keys"""
+        label0 = tk.Label(frame, text=label0_text)
+        label0.pack()
+
+        # First table for keyboard special keys
+        table1 = ttk.Treeview(frame, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(specialkeys)//4)
+
+        for i in range(0, len(specialkeys), 4):
+            table1.insert('', tk.END, values=specialkeys[i:i+4])
+
+        table1.pack(fill="both", expand=True)
+
+        label = tk.Label(frame, text="Mouse Functions")
+        label.pack()
+
+        # Second table for mouse functions
+        table2 = ttk.Treeview(frame, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(mousebuttons)//4)
+
+        for i in range(0, len(mousebuttons), 4):
+            table2.insert('', tk.END, values=mousebuttons[i:i+4])
+
+        table2.pack(fill="both", expand=True)
+
+        def on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        frame.bind("<Configure>", on_configure)
+        """def _on_mousewheel(event):
+            print('mousewheel')
+            canvas.yview_scroll(int(-1*(yview_scroll(direction,"units")//120)), "units")
+        print('bind wheel scroll')
+        canvas.bind("<MouseWheel>", _on_mousewheel)"""
+            
 
 
     def generate_wav_files(folder_path, messages):
-        print('generating wav files')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'generating wav files')
         import array
         import pyttsx4
-        print('jo')
+        print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'jo')
  
         from pydub import AudioSegment
         AudioSegment.ffmpeg = os.path.abspath("ffmpegwin64/bin/ffmpeg.exe") 
@@ -548,13 +818,15 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         for message in messages:
             
             sanitized_message = sanitize_message(message)
+            if sanitized_message == "":
+                continue
             wav_file_name = sanitized_message + ".wav"
             wav_file_path = os.path.abspath(os.path.join(folder_path, wav_file_name))
             wavfiles[message] = wav_file_path #maybe bad when message is not suitable for index
             
             if not os.path.exists(wav_file_path):
                 # WAV file does not exist, generate it using pyttsx3
-                print(wav_file_path)
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],wav_file_path)
                 engine.setProperty('rate', 140) 
                 engine.save_to_file(message, wav_file_path)
                 engine.runAndWait()
@@ -581,14 +853,14 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     #____start gui_______________________________________________________________________________________________________
 
-    print('start gui: set tk root')
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'start gui: set tk root')
     root = tk.Tk()
     root.title("SCvoice settings")
 
     root.geometry("800x650")
     root.configure(background='#222')
 
-    print('set tabs')
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'set tabs')
     tab_control = ttk.Notebook(root, style="TNotebook")
 
     tab1 = ttk.Frame(tab_control,padding=20)
@@ -603,7 +875,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     tab_control.add(tab3, text='start')
 
     tab_control.pack(expand=1, fill="both")
-    print('set tab content')
+    print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'set tab content')
 
     start_button = tk.Button(tab3, text="Start Process", command=lambda: start_process(sound_process, command_execution_process, microphone_recognition_process, recognito,operatingsystem,loopdelay,settings))
     start_button.grid(row=0, column=0)
@@ -613,8 +885,10 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     status_text = tk.Text(tab3, height=10, width=50)
     status_text.grid(row=2, column=0)
-
-    def refresh_display():
+    help_button = ttk.Button(root, text="help", command=help_function, width=6)
+    help_button.place(relx=1.0, rely=0.0, anchor="ne")
+    def refresh_display(settings = settings):
+        #print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],settings)
         for widget in frame.winfo_children():
             widget.destroy()
         # Table header
@@ -657,7 +931,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         blank = ttk.Label(frame, text="  ")
         blank.grid(row=1, column=len(header_labels))
         add_button = ttk.Button(frame, text="Add", command=add_row)
-        add_button.grid(row=len(settings['commands'])+1, column=len(header_labels)+1)
+        add_button.grid(row=len(settings['commands'])+2, column=len(header_labels)+1)
 
 
     language_label = ttk.Label(tab2, text="Select Language:")
@@ -690,39 +964,50 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     select_output_device()
     generate_wav_files('success_messages', [obj['success_message'] for obj in settings['commands']])
-    file_list = [f for f in os.listdir('commandlists') if f.endswith('.json')]
-    
-    commandlist_select = ttk.Combobox(tab1, style='Custom.TCombobox', values=file_list, width=30)
+    file_list = [f.replace('.json', '') for f in os.listdir('commandlists') if f.endswith('.json')]
+
+    comman_settings_frame = tk.Frame(tab1)
+    comman_settings_frame.pack()
+    commandlist_delete_button = ttk.Button(comman_settings_frame, text="delete", command=delete_commandlist,width=6)
+    commandlist_delete_button.grid(row=0, column=0)
+    active_commandlist_label = ttk.Label(comman_settings_frame, text="activ commandlist:",width=17, anchor='e')
+    active_commandlist_label.grid(row=0 , column=1)
+    commandlist_select = ttk.Combobox(comman_settings_frame, style='Custom.TCombobox', values=file_list,width=17)
     commandlist_select.bind("<<ComboboxSelected>>", change_commandlist)
     commandlist_select.set(settings['commandlist'])
-    commandlist_select.pack()
-    entry = ttk.Entry(tab1, width=10, style='Custom.TEntry')
-    entry.pack()
-    entry.insert(0, '')
-    entry.bind('<KeyRelease>', lambda event, key=1: update_micset(event, 1))
+    commandlist_select.grid(row=0 , column=2, sticky="w")
+    new_commandlist_label = ttk.Label(comman_settings_frame, text="add new command list:",width=20, anchor='e')
+    new_commandlist_label.grid(row=0 , column=3)
+    new_commandlist_entry = ttk.Entry(comman_settings_frame, width=16, style='Custom.TEntry')
+    new_commandlist_entry.grid(row=0 , column=4)
+    new_commandlist_entry.insert(0, 'example')
+    commandlist_add_button = ttk.Button(comman_settings_frame, text="add", command=add_commandlist,width=6)
+    commandlist_add_button.grid(row=0, column=5)
+
     space_above = tk.Frame(tab1, height=10)
     space_above.pack()
     separator = ttk.Separator(tab1, orient='horizontal')
     separator.pack(fill='x')
     space_below = tk.Frame(tab1, height=10)
     space_below.pack()
+
     # Create a canvas for tab1
-    canvas = tk.Canvas(tab1, highlightthickness=0, bg="#222")
-    canvas.pack(side="left", fill="both", expand=True)
+    canvas0 = tk.Canvas(tab1, highlightthickness=0, bg="#222")
+    canvas0.pack(side="left", fill="both", expand=True)
 
     # Add a scrollbar to the canvas
-    scrollbar = tk.Scrollbar(tab1, orient="vertical", command=canvas.yview)
+    scrollbar = tk.Scrollbar(tab1, orient="vertical", command=canvas0.yview)
     scrollbar.pack(side="right", fill="y")
-    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas0.configure(yscrollcommand=scrollbar.set)
 
     # Create a frame inside the canvas to hold the content of tab1
-    frame = ttk.Frame(canvas)
+    frame = ttk.Frame(canvas0)
 
-    canvas.create_window((0, 0), window=frame, anchor="nw")
+    canvas0.create_window((0, 0), window=frame, anchor="nw")
 
 
     # Configure the canvas to update scroll region when the size of the frame changes
-    frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    frame.bind("<Configure>", lambda e: canvas0.configure(scrollregion=canvas0.bbox("all")))
     style = ttk.Style()
     style.theme_use('alt')  # Use the "alt" theme for more granular customization
 
@@ -739,6 +1024,6 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     style.map("TNotebook.Tab", background=[("selected", "#222")])
     refresh_display()
     # Set dark theme colors
-    
+  
     root.after(1000, update_status) 
     root.mainloop()
