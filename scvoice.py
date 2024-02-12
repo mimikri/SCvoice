@@ -24,6 +24,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             if sound_path:
                 print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],"playing", wavfiles[sound_path])
                 print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],f"Using output device index {desired_output_device_index} for audio output")
+
                 with wave.open(wavfiles[sound_path], 'rb') as wave_file:
                     stream_params = {
                         'format': pa.get_format_from_width(wave_file.getsampwidth()),
@@ -845,8 +846,14 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             sanitized_message = sanitize_message(message)
             if sanitized_message == "":
                 continue
-            wav_file_name = sanitized_message + ".wav"
-            wav_file_path = os.path.abspath(os.path.join(folder_path, wav_file_name))
+            if message + ".wav" in custom_sounds:
+                
+                wav_file_name = message + ".wav"
+                wav_file_path = os.path.abspath(os.path.join('./custom_sounds', wav_file_name))
+                print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'custom sound',wav_file_path,wav_file_name)
+            else:
+                wav_file_name = sanitized_message + ".wav"
+                wav_file_path = os.path.abspath(os.path.join(folder_path, wav_file_name))
             wavfiles[message] = wav_file_path #maybe bad when message is not suitable for index
             
             if not os.path.exists(wav_file_path):
@@ -877,7 +884,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
    
 
     #____start gui_______________________________________________________________________________________________________
-
+    custom_sounds = [f for f in os.listdir('./custom_sounds') if f.endswith('.wav')]
     print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'start gui: set tk root')
     root = tk.Tk()
     root.title("SCvoice settings")
