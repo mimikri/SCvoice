@@ -88,7 +88,6 @@ espeak-ng provide open source tts, wich we use here as main option for audio suc
 and all the great python liberies:<br>
 pyttsx4<br>
 speech_recognition<br>
-pyautogui<br>
 pynput<br>
 ...
 

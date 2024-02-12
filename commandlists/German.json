@@ -1,98 +1,116 @@
 [
-{
-"order_string": "lande",
-"key_to_press": "n",
-"success_message": "Landeklappen",
-"key_type": "normal"
-},
-{
-"order_string": "auto",
-"key_to_press": "enter write enter",
-"success_message": "auto pilot",
-"key_type": "special"
-},
-{
-"order_string": "karte",
-"key_to_press": "f2",
-"success_message": "\u00f6ffne karte",
-"key_type": "special"
-},
-{
-"order_string": "quantum",
-"key_to_press": "b",
-"success_message": "quantum drive",
-"key_type": "normal"
-},
-{
-"order_string": "info",
-"key_to_press": "shiftright_^",
-"success_message": "zeige debug details",
-"key_type": "special"
-},
-{
-"order_string": "glas",
-"key_to_press": "f1",
-"success_message": " mobiglas",
-"key_type": "normal"
-},
-{
-"order_string": "amera",
-"key_to_press": "f4",
-"success_message": " kammeraperspektive",
-"key_type": "special"
-},
-{
-"order_string": "energ",
-"key_to_press": "u",
-"success_message": "Energie!",
-"key_type": "normal"
-},
-{
-"order_string": "motor",
-"key_to_press": "i",
-"success_message": "triebwerke ansteuern",
-"key_type": "normal"
-},
-{
-"order_string": "ziel",
-"key_to_press": "t",
-"success_message": "zielerfassung",
-"key_type": "normal"
-},
-{
-"order_string": "scan",
-"key_to_press": "v",
-"success_message": "scanne",
-"key_type": "normal"
-},
-{
-"order_string": "chat",
-"key_to_press": "enter",
-"success_message": "chat",
-"key_type": "special"
-},
-{
-"order_string": "kommunikation",
-"key_to_press": "f11",
-"success_message": "komunikationssystem",
-"key_type": "special"
-},
-{
-"order_string": "licht",
-"key_to_press": "l",
-"success_message": "Licht ansteuern",
-"key_type": "normal"
-},
-{
-"order_string": "t\u00fcren \u00f6ff",
-"key_to_press": "\u00f6",
-"success_message": "t\u00fcren \u00f6ffnen",
-"key_type": "normal"
-},
-{
-"order_string": "t\u00fcren schlie",
-"key_to_press": "\u00e4",
-"success_message": "t\u00fcren schlie\u00dfen",
-"key_type": "normal"
-}
+    {
+        "order_string": "lande",
+        "key_to_press": "shift:2500",
+        "success_message": "Landeklappen",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "auto",
+        "key_to_press": "enter write enter",
+        "success_message": "auto pilot",
+        "key_type": "special"
+    },
+    {
+        "order_string": "karte",
+        "key_to_press": "f2",
+        "success_message": "\u00f6ffne karte",
+        "key_type": "special"
+    },
+    {
+        "order_string": "quantum",
+        "key_to_press": "b",
+        "success_message": "quantum drive",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "info",
+        "key_to_press": "shiftright_^",
+        "success_message": "zeige debug details",
+        "key_type": "special"
+    },
+    {
+        "order_string": "glas",
+        "key_to_press": "f1",
+        "success_message": " mobiglas",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "amera",
+        "key_to_press": "f4",
+        "success_message": " kammeraperspektive",
+        "key_type": "special"
+    },
+    {
+        "order_string": "energ",
+        "key_to_press": "u",
+        "success_message": "Energie!",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "ziel",
+        "key_to_press": "t",
+        "success_message": "zielerfassung",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "scan",
+        "key_to_press": "v",
+        "success_message": "scanne",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "chat",
+        "key_to_press": "enter",
+        "success_message": "chat",
+        "key_type": "special"
+    },
+    {
+        "order_string": "kommunikation",
+        "key_to_press": "f11",
+        "success_message": "komunikationssystem",
+        "key_type": "special"
+    },
+    {
+        "order_string": "licht",
+        "key_to_press": "l",
+        "success_message": "Licht ansteuern",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "t\u00fcren \u00f6ff",
+        "key_to_press": "\u00f6",
+        "success_message": "t\u00fcren \u00f6ffnen",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "t\u00fcren schlie",
+        "key_to_press": "\u00e4",
+        "success_message": "t\u00fcren schlie\u00dfen",
+        "key_type": "normal"
+    },
+    {
+        "order_string": "computer an",
+        "key_to_press": "on",
+        "success_message": "eingeschaltet",
+        "key_type": ""
+    },
+    {
+        "order_string": "computer aus",
+        "key_to_press": "off",
+        "success_message": "ausgeschaltet",
+        "key_type": ""
+    },
+    {
+        "order_string": "pause",
+        "key_to_press": "a pause:5000 shift++a",
+        "success_message": "pause",
+        "key_type": ""
+    },
+    {
+        "order_string": "zeitdruck",
+        "key_to_press": "",
+        "success_message": "",
+        "key_type": ""
+    }
 ]
