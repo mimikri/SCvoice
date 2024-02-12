@@ -173,6 +173,10 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                                         if len(key_sequence) > 1:
                                             explode = key_sequence.split(":") if ":" in key_sequence else [key_sequence]
                                             if len(explode) > 1:
+                                                if explode[0] == '':# get the ":" right
+                                                    explode[0] = ':'
+                                                    if len(explode) > 2:
+                                                        explode[1] = explode[2]
                                                 print('set presstime to',explode[1])
                                                 presstime = int(explode[1])/1000
                                             key_sequence = explode[0]
@@ -706,8 +710,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        frame = tk.Frame(canvas)
-        canvas.create_window((0, 0), window=frame, anchor='nw')
+        frame1 = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame1, anchor='nw')
         label0_text = """SCvoice Help
         ____________________________________________________________
         hotkeys:
@@ -771,22 +775,22 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         ____________________________________________________________
         
         Keyboard special keys"""
-        label0 = tk.Label(frame, text=label0_text)
+        label0 = tk.Label(frame1, text=label0_text)
         label0.pack()
 
         # First table for keyboard special keys
-        table1 = ttk.Treeview(frame, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(specialkeys)//4)
+        table1 = ttk.Treeview(frame1, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(specialkeys)//4)
 
         for i in range(0, len(specialkeys), 4):
             table1.insert('', tk.END, values=specialkeys[i:i+4])
 
         table1.pack(fill="both", expand=True)
 
-        label = tk.Label(frame, text="Mouse Functions")
+        label = tk.Label(frame1, text="Mouse Functions")
         label.pack()
 
         # Second table for mouse functions
-        table2 = ttk.Treeview(frame, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(mousebuttons)//4)
+        table2 = ttk.Treeview(frame1, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(mousebuttons)//4)
 
         for i in range(0, len(mousebuttons), 4):
             table2.insert('', tk.END, values=mousebuttons[i:i+4])
@@ -796,12 +800,33 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         def on_configure(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
 
-        frame.bind("<Configure>", on_configure)
-        """def _on_mousewheel(event):
+        frame1.bind("<Configure>", on_configure)
+        def _bound_to_mousewheel(event):
+            print('bind wheel')
+            top.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbound_to_mousewheel(event):
+            print('unbind wheel')
+            top.unbind_all("<MouseWheel>")
+
+        def on_mousewheel(event):
+            
+            print(event)
+            if event.delta == 0:
+                steps = -1 if event.num == 5 else 1
+            else:
+                steps = int(event.delta/120)
+            
             print('mousewheel')
-            canvas.yview_scroll(int(-1*(yview_scroll(direction,"units")//120)), "units")
-        print('bind wheel scroll')
-        canvas.bind("<MouseWheel>", _on_mousewheel)"""
+            canvas.yview_scroll(int(-1*(steps)), "units")
+
+        if operatingsystem == 'windows':
+            # with Windows OS
+            canvas.bind_all("<MouseWheel>", on_mousewheel)
+        else:
+            # with Linux OS
+            canvas.bind_all("<Button-4>", on_mousewheel)
+            canvas.bind_all("<Button-5>", on_mousewheel)
             
 
 
