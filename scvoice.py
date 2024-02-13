@@ -110,6 +110,11 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     def command_execution_process(sound_queue, commands_queue,loopdelay,commands):
         from pynput.keyboard import Key, Controller
         from pynput.mouse import Button, Controller as MouseController
+        import os
+
+        def run_program(command):
+            os.system(f'{command}')  # Run the command
+
         last_order = [0,'last order']#[0] a timstamp, when the last command was executed, [1] the last command
         keyboard = Controller()
         listen_state = 'on'
@@ -128,6 +133,10 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
                         elif command["key_to_press"] == 'off':
                             print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'turn off')
                             listen_state = 'off'
+                            continue
+                        elif command["key_to_press"][:4] == 'run:':
+                            print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'run:', command["key_to_press"][4:])
+                            run_program(command["key_to_press"][4:])
                             continue
                         print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'status:', listen_state)
                         if listen_state == 'on':
@@ -699,7 +708,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
     def help_function():
         text = "special keys:\n" + "\n".join(specialkeys)
-        top = tk.Toplevel(root)  # Use the existing root window for the Toplevel
+
+        top = tk.Toplevel(root, padx=10, pady=10, bg="#111")  # Use the existing root window for the Toplevel
         top.geometry("800x600")
         top.title("SCvoice Help")
 
@@ -711,7 +721,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        frame1 = tk.Frame(canvas)
+        frame1 = tk.Frame(canvas, bg="#111")
         canvas.create_window((0, 0), window=frame1, anchor='nw')
         label0_text = """SCvoice Help
         ____________________________________________________________
@@ -722,13 +732,11 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         "shift++a" = "A"
         
         ------------------------------------------------------------
-
         pressing mutlible keys:
 
         "a b c" = "abc"
         
         ------------------------------------------------------------
-        
         write text:
 
         the "write" key writes the text sayed after the command.
@@ -738,7 +746,6 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         write can be combined too.
 
         ------------------------------------------------------------
-        
         press time:
 
         each key can be augmented with a time in ms to press.
@@ -746,7 +753,6 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         "shift++a:1000" = presses "shift+a" for 1 second. 
 
         ------------------------------------------------------------
-        
         pause command:
 
         the "pause" command waits for the given time in ms, before going on.
@@ -755,29 +761,53 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         "a pause shift++a" = "a" waits 500ms, then "shift++a"
 
         ------------------------------------------------------------
-        
         on and off:
 
         the "on" command and "off" commands can be used to turn the command execution on and off.
-        "on" = when keywords are triggert a command is executed.
-        "off" = when keywords are triggert a command is nothing is done, exept the keyword is "on". 
+        "on" = when keywords are triggered a commands get executed.
+        "off" = when keywords are triggered nothing is done, exept the keyword is "on". 
+
+        ------------------------------------------------------------
+        run system command:
+
+        experimental, if you want to use scvoice to open programms on you pc, 
+        then run:command can do this.
+        example: in the keyboard press fiels: 
+        "run:explorer" = opens the windows explorer
 
         ------------------------------------------------------------
         combination:
 
         "a b c shift++a a b c" = "abcAabc"
         ____________________________________________________________
-
         custom soundfiles:
 
+        in the folder "custom_sounds" you can add your own .wav files.
+        to use them you have to enter their name in the in the success message field.
+        successmessages field: "test" = "custom_sounds/test.wav" if the file exists.
+        
+        ------------------------------------------------------------
         custom commandlists:
 
+        commandlists are json files in the folder "commandlists".
+        they can be exchaned and in the ui, they can be created and deleted,
+        with "add" and "delete" in the first line of the commandlist tab.
+        to add one, enter the name of the new commandlist in the field left to the add button,and press add.
+        to delete one, press the delete button and the active commandlist will be deleted.
+
+        ------------------------------------------------------------
         adding recognition models:
+
+        to add a model you can download it from: https://alphacephei.com/vosk/models for example.
+        then unzip it into the SCvoice folder and 
+        rename the the new models folder to "yout fafourit model name" # "model"
+        for example "BigGermanmodel", to be recognized by SCvoice the folder has to end with "model".
+        once done, you can open scvoice and the model will be available in language tab.
         ____________________________________________________________
         
         Keyboard special keys"""
-        label0 = tk.Label(frame1, text=label0_text)
-        label0.pack()
+        label0 = tk.Label(frame1, text=label0_text,  justify="left", background='#222', foreground='white')
+        label0.pack(fill="both", expand=True)
 
         # First table for keyboard special keys
         table1 = ttk.Treeview(frame1, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(specialkeys)//4)
@@ -787,38 +817,32 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
         table1.pack(fill="both", expand=True)
 
-        label = tk.Label(frame1, text="Mouse Functions")
-        label.pack()
+        #label = tk.Label(frame1, text="Mouse Functions",  justify="left", background='#222', foreground='white')
+        #label.pack(fill="both", expand=True)
 
         # Second table for mouse functions
-        table2 = ttk.Treeview(frame1, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(mousebuttons)//4)
+        #table2 = ttk.Treeview(frame1, columns=('col1', 'col2', 'col3', 'col4'), show='', style="TLabel", height=len(mousebuttons)//4)
 
-        for i in range(0, len(mousebuttons), 4):
-            table2.insert('', tk.END, values=mousebuttons[i:i+4])
+        #for i in range(0, len(mousebuttons), 4):
+        #    table2.insert('', tk.END, values=mousebuttons[i:i+4])
 
-        table2.pack(fill="both", expand=True)
+        #table2.pack(fill="both", expand=True)
 
         def on_configure(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
 
         frame1.bind("<Configure>", on_configure)
-        def _bound_to_mousewheel(event):
-            print('bind wheel')
-            top.bind_all("<MouseWheel>", _on_mousewheel)
 
-        def _unbound_to_mousewheel(event):
-            print('unbind wheel')
-            top.unbind_all("<MouseWheel>")
 
         def on_mousewheel(event):
             
-            print(event)
+            
             if event.delta == 0:
                 steps = -1 if event.num == 5 else 1
             else:
                 steps = int(event.delta/120)
             
-            print('mousewheel')
+           
             canvas.yview_scroll(int(-1*(steps)), "units")
 
         if operatingsystem == 'windows':
@@ -828,8 +852,23 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
             # with Linux OS
             canvas.bind_all("<Button-4>", on_mousewheel)
             canvas.bind_all("<Button-5>", on_mousewheel)
+        def on_close_toplevel():
+            # Unbind the event handlers for the canvas within the toplevel window
+            print('onclose')
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+            canvas0.bind_all("<MouseWheel>", on_mousewheel_main)
+            canvas0.bind_all("<Button-4>", on_mousewheel_main)
+            canvas0.bind_all("<Button-5>", on_mousewheel_main)
+            # Destroy the toplevel window
+            top.destroy()
+        
+        # Set the protocol for the toplevel window to call the on_close_toplevel function when the window is closed
+        top.protocol("WM_DELETE_WINDOW", on_close_toplevel)
             
-
+    def scroll_binder(event):
+        pass
 
     def generate_wav_files(folder_path, messages):
         print(time.strftime("%H:%M:%S ") + str(round(time.time() * 1000))[-3:],'generating wav files')
@@ -924,8 +963,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
         for widget in frame.winfo_children():
             widget.destroy()
         # Table header
-        header_labels = ['Num', 'Command', 'Keyboard Press', 'Success Message']
-        widths = [15,15,35]
+        header_labels = ['Num', 'Command', 'Keyboard Press', 'Success Message',' ']
+        widths = [15,35,20]
         for i, label in enumerate(header_labels):
             header_label = ttk.Label(frame, text=label)
             header_label.grid(row=1, column=i)
@@ -943,8 +982,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
 
 
-            delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i))
-            delete_button.grid(row=i+2, column=len(header_labels)+1,sticky="e")
+            delete_button = ttk.Button(frame, text="Delete", command=lambda i=i: delete_row(i), width=7)
+            delete_button.grid(row=i+2, column=len(header_labels),sticky="e")
             lable_mic = ttk.Label(tab2, text="Mic settings:")
             lable_mic.grid(row=8, column=0,columnspan=2,sticky="w")
         for i, (key, value) in enumerate(settings['micsettings'].items()):
@@ -962,8 +1001,8 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
 
         blank = ttk.Label(frame, text="  ")
         blank.grid(row=1, column=len(header_labels))
-        add_button = ttk.Button(frame, text="Add", command=add_row)
-        add_button.grid(row=len(settings['commands'])+2, column=len(header_labels)+1)
+        add_button = ttk.Button(frame, text="Add", command=add_row, width=7)
+        add_button.grid(row=len(settings['commands'])+2, column=len(header_labels))
 
 
     language_label = ttk.Label(tab2, text="Select Language:")
@@ -998,7 +1037,7 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     generate_wav_files('success_messages', [obj['success_message'] for obj in settings['commands']])
     file_list = [f.replace('.json', '') for f in os.listdir('commandlists') if f.endswith('.json')]
 
-    comman_settings_frame = tk.Frame(tab1)
+    comman_settings_frame = tk.Frame(tab1,background='#222')
     comman_settings_frame.pack()
     commandlist_delete_button = ttk.Button(comman_settings_frame, text="delete", command=delete_commandlist,width=6)
     commandlist_delete_button.grid(row=0, column=0)
@@ -1016,11 +1055,11 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     commandlist_add_button = ttk.Button(comman_settings_frame, text="add", command=add_commandlist,width=6)
     commandlist_add_button.grid(row=0, column=5)
 
-    space_above = tk.Frame(tab1, height=10)
+    space_above = tk.Frame(tab1, height=10, background='#222')
     space_above.pack()
     separator = ttk.Separator(tab1, orient='horizontal')
     separator.pack(fill='x')
-    space_below = tk.Frame(tab1, height=10)
+    space_below = tk.Frame(tab1, height=10, background='#222')
     space_below.pack()
 
     # Create a canvas for tab1
@@ -1031,7 +1070,24 @@ if __name__ == '__main__':#avoid that multiprocesses load unnessesary modules
     scrollbar = tk.Scrollbar(tab1, orient="vertical", command=canvas0.yview)
     scrollbar.pack(side="right", fill="y")
     canvas0.configure(yscrollcommand=scrollbar.set)
+    def on_mousewheel_main(event):
+            
+        
+        if event.delta == 0:
+            steps = -1 if event.num == 5 else 1
+        else:
+            steps = int(event.delta/120)
+            
+        
+        canvas0.yview_scroll(int(-1*(steps)), "units")
 
+    if operatingsystem == 'windows':
+        # with Windows OS
+        canvas0.bind_all("<MouseWheel>", on_mousewheel_main)
+    else:
+        # with Linux OS
+        canvas0.bind_all("<Button-4>", on_mousewheel_main)
+        canvas0.bind_all("<Button-5>", on_mousewheel_main)    
     # Create a frame inside the canvas to hold the content of tab1
     frame = ttk.Frame(canvas0)
 

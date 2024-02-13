@@ -1,7 +1,7 @@
 {
     "LNG": "German",
     "audio_device": "None",
-    "commandlist": "English",
+    "commandlist": "German",
     "micsettings": {
         "energy_threshold": "1500",
         "dynamic_energy_threshold": "True",
@@ -9,6 +9,7 @@
         "dynamic_energy_ratio": 1.5,
         "pause_threshold": 0.05,
         "phrase_threshold": 0.05,
-        "non_speaking_duration": 0.05
+        "non_speaking_duration": 0.05,
+        "1": "hallo"
     }
 }
