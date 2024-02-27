@@ -46,6 +46,11 @@ venv/bin/python3 scvoice.py
 
 <br>
 
+# communitiy<br>
+
+join our Matrix chat at  #SCvoice:fkeinsten.de<br>
+<br>
+
 
 # known errors<br>
 there are some errormessages under linux according to alsa and jackserver, this can be ingnored, <br>
